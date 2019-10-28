@@ -1,6 +1,9 @@
 
-## Generate samples
+def choseaction (state):
+  return 0
 
+## Generate samples
+#import pandas as pd
 import random
 import gym
 import tqdm
@@ -10,6 +13,25 @@ env = gym.make('CartPole-v1')
 generate_samples = True
 
 random.seed(2019)
+
+f = open("a_CartPositionQuantile.csv","r")
+cart_quantile = f.read().split(',')
+f.close()
+f = open("a_CartVelQuantile.csv","r")
+cart_velocity = f.read().split(',')
+f.close()
+f = open("a_PoleAngleQuantile.csv","r")
+pole_angle = f.read().split(',')
+f.close()
+f = open("a_PoleVelocityQuantile.csv","r")
+pole_velocity= f.read().split(',')
+f.close()
+
+print(cart_quantile )
+print(cart_velocity )
+print(pole_angle )
+print(pole_velocity )
+
 
 if(generate_samples):
     print("Generating samples ...")
