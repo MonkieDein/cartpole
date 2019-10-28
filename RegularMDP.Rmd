@@ -5,7 +5,8 @@ output: html_notebook
 Set working directory and also read data
 ```{r}
 rm(list = ls())
-setwd("~/Desktop/AML/cartpole")
+# setwd("~/Desktop/AML/cartpole")
+setwd("~/Desktop/GITHUB/cartpole/cartpole")
 df = read.csv("cartpole.csv")
 ```
 
@@ -22,6 +23,10 @@ PoleAngleQuantile  = quantile(df$PoleAngle,(0:10)*0.1)
 PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:10)*0.1)
 # aggregating state initialization
 df2 = df
+# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
+# create penalty
+df2$Reward[which(df2$Reward==0)] = -50 # penalty -50
+# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
 n = length(df2$Step)
 df2$CartPos = 0
 df2$CartVelocity = 0
@@ -139,7 +144,7 @@ for(i in 1:len_state){
 # }
 
 
-discount = 0.9
+discount = 0.99
 v = rep(0,len_state)
 
 for (n in 1:200){
@@ -151,17 +156,24 @@ for (n in 1:200){
 result=(ExpectedRew1 + T1 %*% v)>(ExpectedRew2 + T2 %*% v)
 # OUTPUT
 
-write.csv(CartPosQuantile,"a_CartPositionQuantile.csv")
-write.csv(CartVelQuantile,"a_CartVelQuantile.csv")
-write.csv(PoleAngleQuantile,"a_PoleAngleQuantile.csv")
-write.csv(PoleVelocityQuantile,"a_PoleVelocityQuantile.csv")
-write.csv(StateSpace,"a_StateMap.csv")
-write.csv(stay,"a_StateArr.csv")
-write.csv(ExpectedRew1,"a_Reward1.csv")
-write.csv(ExpectedRew2,"a_Reward2.csv")
-write.csv(result,"a_policy.csv")
+summary(v)
+summary(result)
+
+k="a"
+if (TRUE){
+  write.csv(CartPosQuantile,paste0(k,"_CartPositionQuantile.csv"))
+  write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))
+  write.csv(PoleAngleQuantile,paste0(k,"_PoleAngleQuantile.csv"))
+  write.csv(PoleVelocityQuantile,paste0(k,"_PoleVelocityQuantile.csv"))
+  write.csv(StateSpace,paste0(k,"_StateMap.csv"))
+  write.csv(stay,paste0(k,"_StateArr.csv"))
+  write.csv(ExpectedRew1,paste0(k,"_Reward1.csv"))
+  write.csv(ExpectedRew2,paste0(k,"_Reward2.csv"))
+  write.csv(as.numeric(result),paste0(k,"_policy.csv"))
+}
 
 
+# a2 is no penalty :: a is with penalty
 
 ```
 
