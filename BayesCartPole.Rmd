@@ -1,0 +1,158 @@
+---
+title: "BayesianCartPole"
+author: "Monkie"
+date: "10/29/2019"
+output: pdf_document
+---
+
+
+
+```{r}
+list.of.packages <- c("splines", "devtools", "shinystan", "rstan", "lmerTest")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(splines)
+library(devtools)
+library(shinystan)
+library(rstan)
+library(lmerTest)
+
+rm(list = ls())
+setwd("~/Desktop/GITHUB/cartpole/cartpole")
+df = read.csv("cartpole50.csv")
+dfsym = df
+df = rbind(df,dfsym)
+dfsym[,2:5] = -dfsym[,2:5]
+dfsym$Action = as.numeric(dfsym$Action==0)
+df$FutCarPos = c(df$CartPos[-1],0)
+df$FutCarVel = c(df$CartVelocity[-1],0)
+df$FutPolAng = c(df$PoleAngle[-1],0)
+df$FutPolVel = c(df$PoleVelocity[-1],0)
+
+df = df[-(which(df$Step==0)[-1] - 1),]
+df = df[-nobs(df),]
+# df$FutPos[(which(df$Step==0)[-1] - 1)]
+
+# DISTIRBUTE THE DATA FRAME FOR EACH ACTION
+df0 = df[which(df$Action==0),]
+df1 = df[which(df$Action==1),]
+
+# FIT LINEAR MODELS FOR ACTION 0
+fit0CarPos = lm(FutCarPos ~ CartPos ,data = df0)
+plot(df0$CartPos,df0$FutCarPos)
+abline(fit0CarPos$coefficients,col="red")
+
+fit0CarVel = lm(FutCarVel ~ CartVelocity ,data = df0)
+plot(df0$CartVelocity,df0$FutCarVel)
+abline(fit0CarVel$coefficients,col="red")
+
+fit0PolAng = lm(FutPolAng ~ PoleAngle ,data = df0)
+plot(df0$PoleAngle,df0$FutPolAng)
+abline(fit0PolAng$coefficients,col="red")
+
+fit0PolVel = lm(FutPolVel ~ PoleVelocity ,data = df0)
+plot(df0$PoleVelocity,df0$FutPolVel)
+abline(fit0PolVel$coefficients,col="red")
+
+
+
+# FIT LINEAR MODELS FOR ACTION 1
+fit1CarPos = lm(FutCarPos ~ CartPos ,data = df1)
+fit1CarVel = lm(FutCarVel ~ CartVelocity ,data = df1)
+fit1PolAng = lm(FutPolAng ~ PoleAngle ,data = df1)
+fit1PolVel = lm(FutPolVel ~ PoleVelocity ,data = df1)
+
+par(mfrow=c(2,2))
+plot(df1$CartPos,df1$FutCarPos,xlab="Cart Position @ time t", ylab="Cart Position @ time t+1")
+abline(fit1CarPos$coefficients,col="red",)
+plot(df1$CartVelocity,df1$FutCarVel,xlab="Cart Velocity @ time t", ylab="Cart Velocity @ time t+1")
+abline(fit1CarVel$coefficients,col="red")
+plot(df1$PoleAngle,df1$FutPolAng,xlab="Pole Angle @ time t", ylab="Pole Angle @ time t+1")
+abline(fit1PolAng$coefficients,col="red")
+plot(df1$PoleVelocity,df1$FutPolVel,xlab="Pole Velocity @ time t", ylab="Pole Velocity @ time t+1")
+abline(fit1PolVel$coefficients,col="red")
+
+summary(fit0CarPos)
+summary(fit0CarVel)
+summary(fit0PolAng)
+summary(fit0PolVel)
+
+
+summary(fit1CarPos)
+summary(fit1CarVel)
+summary(fit1PolAng)
+summary(fit1PolVel)
+```
+
+Add some noise into the data
+```{r}
+df = read.csv("cartpole50.csv")
+
+rCartPos = max(df$CartPos) - min(df$CartPos)
+rCartVel = max(df$CartVelocity) - min(df$CartVelocity)
+rPoleAng = max(df$PoleAngle) - min(df$PoleAngle)
+rPoleVel = max(df$PoleVelocity) - min(df$PoleVelocity)
+
+errCartPos= rnorm(nobs(df$Step), 0, rCartPos/20)
+errCartVel = rnorm(nobs(df$Step), 0,  rCartVel/20)
+errPoleAng = rnorm(nobs(df$Step), 0,  rPoleAng/20)
+errPoleVel = rnorm(nobs(df$Step), 0,  rPoleVel/20)
+```
+
+redo process with errors
+```{r}
+df$CartPos = df$CartPos + errCartPos
+df$CartVelocity = df$CartVelocity + errCartVel
+df$PoleAngle = df$PoleAngle + errPoleAng
+df$PoleVelocity = df$PoleVelocity + errPoleVel
+
+df$FutCarPos = c(df$CartPos[-1],0)
+df$FutCarVel = c(df$CartVelocity[-1],0)
+df$FutPolAng = c(df$PoleAngle[-1],0)
+df$FutPolVel = c(df$PoleVelocity[-1],0)
+
+df = df[-(which(df$Step==0)[-1] - 1),]
+df = df[-nobs(df),]
+# df$FutPos[(which(df$Step==0)[-1] - 1)]
+
+# DISTIRBUTE THE DATA FRAME FOR EACH ACTION
+df0 = df[which(df$Action==0),]
+df1 = df[which(df$Action==1),]
+
+# FIT LINEAR MODELS FOR ACTION 0
+fit0CarPos = lm(FutCarPos ~ CartPos ,data = df0)
+plot(df0$CartPos,df0$FutCarPos)
+abline(fit0CarPos$coefficients,col="red")
+
+fit0CarVel = lm(FutCarVel ~ CartVelocity ,data = df0)
+plot(df0$CartVelocity,df0$FutCarVel)
+abline(fit0CarVel$coefficients,col="red")
+
+fit0PolAng = lm(FutPolAng ~ PoleAngle ,data = df0)
+plot(df0$PoleAngle,df0$FutPolAng)
+abline(fit0PolAng$coefficients,col="red")
+
+fit0PolVel = lm(FutPolVel ~ PoleVelocity ,data = df0)
+plot(df0$PoleVelocity,df0$FutPolVel)
+abline(fit0PolVel$coefficients,col="red")
+# FIT LINEAR MODELS FOR ACTION 1
+fit1CarPos = lm(FutCarPos ~ CartPos ,data = df1)
+fit1CarVel = lm(FutCarVel ~ CartVelocity ,data = df1)
+fit1PolAng = lm(FutPolAng ~ PoleAngle ,data = df1)
+fit1PolVel = lm(FutPolVel ~ PoleVelocity ,data = df1)
+
+par(mfrow=c(2,2))
+plot(df1$CartPos,df1$FutCarPos,xlab="Cart Position @ time t", ylab="Cart Position @ time t+1")
+abline(fit1CarPos$coefficients,col="red",)
+plot(df1$CartVelocity,df1$FutCarVel,xlab="Cart Velocity @ time t", ylab="Cart Velocity @ time t+1")
+abline(fit1CarVel$coefficients,col="red")
+plot(df1$PoleAngle,df1$FutPolAng,xlab="Pole Angle @ time t", ylab="Pole Angle @ time t+1")
+abline(fit1PolAng$coefficients,col="red")
+plot(df1$PoleVelocity,df1$FutPolVel,xlab="Pole Velocity @ time t", ylab="Pole Velocity @ time t+1")
+abline(fit1PolVel$coefficients,col="red")
+```
+
+
+
+

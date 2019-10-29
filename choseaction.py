@@ -16,8 +16,8 @@ def readinput(filename):
 
 
 
-version = "a3"
-if version!="a3":
+version = "a4"
+if version!="a3" and version!="a4":
     cart_quantile = readinput( version +"_CartPositionQuantile.csv")
 else :
     cart_quantile = [1]
@@ -41,7 +41,7 @@ statearr = [i-1 for i in statearr]
 
 def choseaction (state):
     
-    if (version!="a3"):
+    if version!="a3" and version!="a4":
         i=sum([(state[0]>=x) for x in cart_quantile])-1
     else :
         i=0

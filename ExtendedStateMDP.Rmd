@@ -1,0 +1,172 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+Set working directory and also read data
+```{r}
+rm(list = ls())
+# setwd("~/Desktop/AML/cartpole")
+setwd("~/Desktop/GITHUB/cartpole/cartpole")
+df = read.csv("cartpole.csv")
+```
+
+Data Analyze
+```{r}
+summary(df)
+
+# Discretize state as 10 differnt quantile for eqch variable
+CartVelQuantile  = quantile(df$CartVelocity,(0:20)*0.05)
+# Discretize state as 10 differnt quantile for eqch variable
+PoleAngleQuantile  = quantile(df$PoleAngle,(0:20)*0.05)
+# Discretize state as 10 differnt quantile for eqch variable
+PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:20)*0.05)
+# aggregating state initialization
+df2 = df
+# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
+# create penalty
+df2$Reward[which(df2$Reward==0)] = -50 # penalty -50
+# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
+n = length(df2$Step)
+
+df2$CartVelocity = 0
+df2$PoleAngle = 0
+df2$PoleVelocity = 0
+# create variable refer to length
+car_vel_len = length(CartVelQuantile)
+pol_ang_len = length(PoleAngleQuantile)
+pol_vel_len = length(PoleVelocityQuantile)
+# aggregating state 
+for (i in 1:car_vel_len){
+  df2$CartVelocity = df2$CartVelocity + (df$CartVelocity >= CartVelQuantile[i])
+  df2$PoleAngle = df2$PoleAngle + (df$PoleAngle >= PoleAngleQuantile[i])
+  df2$PoleVelocity = df2$PoleVelocity + (df$PoleVelocity >= PoleVelocityQuantile[i])
+}
+# Createsummary for each variable
+summary(as.factor(df2$CartVelocity))
+summary(as.factor(df2$PoleAngle))
+summary(as.factor(df2$PoleVelocity))
+summary(df2)
+
+```
+
+Create average reward ARRAY by LOOPING THROUGH THE DATA AND TAKE AVERAGE FOR EACH ACTION STATE PAIR
+```{r}
+StateSpace = rep(0,car_vel_len^3)
+ExpectedRew1 = StateSpace
+Occurence1 = StateSpace
+ExpectedRew2 = StateSpace
+Occurence2 = StateSpace
+# distinguish state
+df2$State = ((df2$CartVelocity-1) + car_vel_len*(df2$PoleAngle-1) + car_vel_len*pol_ang_len*(df2$PoleVelocity-1))+1
+# create rewawrd by taking average reward
+for (i in 1:length(df2$Step)){
+  if (df2$Action[df2$State[i]] == 1){
+    ExpectedRew1[df2$State[i]] = ExpectedRew1[df2$State[i]] + df2$Reward[i]
+    Occurence1[df2$State[i]] = Occurence1[df2$State[i]] + 1    
+  }
+  if (df2$Action[df2$State[i]] == 0){
+    ExpectedRew2[df2$State[i]] = ExpectedRew2[df2$State[i]] + df2$Reward[i]
+    Occurence2[df2$State[i]] = Occurence2[df2$State[i]] + 1    
+  }
+}
+data1 = which(Occurence1 >0)
+ExpectedRew1[data1] = ExpectedRew1[data1]/Occurence1[data1] 
+data2 = which(Occurence2 >0)
+ExpectedRew2[data2] = ExpectedRew2[data2]/Occurence2[data2] 
+# create summry 
+summary(ExpectedRew1 )
+summary(Occurence1 )
+summary(ExpectedRew2 )
+summary(Occurence2 )
+
+tot_occurence = Occurence1+Occurence2
+
+stay = which(tot_occurence != 0)
+for ( i in  1:length(stay)){
+  StateSpace[stay[i]] = i 
+}
+remove = which(tot_occurence == 0)
+
+# update indexing 
+for (i in 1:length(df2$Step) ){
+  df2$State[i] = StateSpace[df2$State[i]]
+}
+```
+
+
+Create Transition probability
+```{r}
+# remove state that never been visited.
+ExpectedRew1 = ExpectedRew1[-remove]
+ExpectedRew1 = c(ExpectedRew1,0) # reward for terminations state
+ExpectedRew2 = ExpectedRew2[-remove]
+ExpectedRew2 = c(ExpectedRew2,0) # reward for terminations state
+Occurence1 = Occurence1[-remove]
+Occurence1 = c(Occurence1,sum(df2$Action[(which(df2$Step==0)-1)])) # occurence for terminations state
+Occurence2 = Occurence2[-remove]
+Occurence2 = c(Occurence2,sum(df2$Action[(which(df2$Step==0)-1)]==0)) # occurence for terminations state
+
+len_state = length(Occurence1) # last state is terminations state
+T1 = matrix(0,len_state,len_state)
+T2 = matrix(0,len_state,len_state)
+
+df2$futureState = c(df2$State[-n],len_state)
+df2$futureState[which(df2$Step[-1]==0)] = len_state # Termination State
+
+act1 = which(df2$Action==1) 
+for (i in act1){
+  T1[df2$State[i],df2$futureState[i]]=T1[df2$State[i],df2$futureState[i]]+1
+}
+
+act2 = which(df2$Action==0) 
+for (i in act2){
+  T2[df2$State[i],df2$futureState[i]]=T2[df2$State[i],df2$futureState[i]]+1
+}
+
+for(i in 1:len_state){
+  s1 =sum(T1[i,])
+  s2 =sum(T2[i,])
+  if ( s1>0 ){
+    T1[i,] = T1[i,]/s1
+  }
+  if ( s2>0 ){
+    T2[i,] = T2[i,]/s2
+  }
+}
+
+# for(i in 1:100){
+#   cat(i,sum(T1[i,]),"\n")
+# }
+
+
+discount = 0.99
+v = rep(0,len_state)
+
+for (n in 1:200){
+  # v2 =pmax(ExpectedRew1 + discount*T1 %*% v, ExpectedRew2 + discount*T2 %*% v)
+  # cat(n,max(v2-v),"\n")
+  v  =pmax(ExpectedRew1 + discount*T1 %*% v, ExpectedRew2 +  discount* T2 %*% v)
+}
+
+result=(ExpectedRew1 + T1 %*% v)>(ExpectedRew2 + T2 %*% v)
+# OUTPUT
+
+summary(v)
+summary(result)
+
+k="a4"
+if (TRUE){
+  write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))
+  write.csv(PoleAngleQuantile,paste0(k,"_PoleAngleQuantile.csv"))
+  write.csv(PoleVelocityQuantile,paste0(k,"_PoleVelocityQuantile.csv"))
+  write.csv(StateSpace,paste0(k,"_StateMap.csv"))
+  write.csv(stay,paste0(k,"_StateArr.csv"))
+  write.csv(ExpectedRew1,paste0(k,"_Reward1.csv"))
+  write.csv(ExpectedRew2,paste0(k,"_Reward2.csv"))
+  write.csv(as.numeric(result),paste0(k,"_policy.csv"))
+}
+
+
+
+```
+

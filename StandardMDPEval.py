@@ -1,4 +1,5 @@
-from choseaction import *
+#from choseaction import *
+from dynamicChoseaction import *
 ## Generate samples
 #import pandas as pd
 import random
@@ -14,8 +15,6 @@ generate_samples = True
 
 random.seed(2019)
 
-
-
 if(generate_samples):
     print("Generating samples ...")
 
@@ -26,16 +25,17 @@ if(generate_samples):
                                 "PoleVelocity", "Action", "Reward"])
         
         laststate = None
-        for k in tqdm.trange(2000):
+        for k in tqdm.trange(20):
             env.reset()
             done = False
             count = 0
             env.render()
             action = env.action_space.sample()
+            j=0
             for i in range(200):                    
                 if i > 0:
                     samplewriter.writerow((i-1,) + tuple(state) + (action,) + (reward,))
-                
+                j=i
                 # stop only after saving the state
                 if count ==1:
                   break
@@ -47,9 +47,11 @@ if(generate_samples):
                 
                 
                 env.render()
-                action = choseaction(tuple(state))
+#                action = choseaction(tuple(state))
+                action = dynamicChoseaction(tuple(state))
+                
                 if action == -1:
                     action = env.action_space.sample()
                 
-                
+            print("\n",j)
     env.close()
