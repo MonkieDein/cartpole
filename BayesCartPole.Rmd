@@ -20,7 +20,7 @@ library(lmerTest)
 
 rm(list = ls())
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
-df = read.csv("cartpole50.csv")
+df = read.csv("cartpole.csv")
 dfsym = df
 df = rbind(df,dfsym)
 dfsym[,2:5] = -dfsym[,2:5]
@@ -33,6 +33,10 @@ df$FutPolVel = c(df$PoleVelocity[-1],0)
 df = df[-(which(df$Step==0)[-1] - 1),]
 df = df[-nobs(df),]
 # df$FutPos[(which(df$Step==0)[-1] - 1)]
+df$ChgCarPos = df$FutCarPos - df$CartPos
+df$ChgCarVel = df$FutCarVel - df$CartVelocity
+df$ChgPolAng = df$FutPolAng - df$PoleAngle
+df$ChgPolVel = df$FutPolVel - df$PoleVelocity
 
 # DISTIRBUTE THE DATA FRAME FOR EACH ACTION
 df0 = df[which(df$Action==0),]
@@ -55,8 +59,6 @@ fit0PolVel = lm(FutPolVel ~ PoleVelocity ,data = df0)
 plot(df0$PoleVelocity,df0$FutPolVel)
 abline(fit0PolVel$coefficients,col="red")
 
-
-
 # FIT LINEAR MODELS FOR ACTION 1
 fit1CarPos = lm(FutCarPos ~ CartPos ,data = df1)
 fit1CarVel = lm(FutCarVel ~ CartVelocity ,data = df1)
@@ -73,16 +75,32 @@ abline(fit1PolAng$coefficients,col="red")
 plot(df1$PoleVelocity,df1$FutPolVel,xlab="Pole Velocity @ time t", ylab="Pole Velocity @ time t+1")
 abline(fit1PolVel$coefficients,col="red")
 
-summary(fit0CarPos)
-summary(fit0CarVel)
-summary(fit0PolAng)
-summary(fit0PolVel)
+summary(fit0CarPos$coefficients)
+summary(fit0CarVel$coefficients)
+summary(fit0PolAng$coefficients)
+summary(fit0PolVel$coefficients)
+
+summary(fit1CarPos$coefficients)
+summary(fit1CarVel$coefficients)
+summary(fit1PolAng$coefficients)
+summary(fit1PolVel$coefficients)
+
+# Predict the changes
+fit1CarPosDelta = lm(ChgCarPos ~ CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)
+fit1CarVelDelta = lm(ChgCarVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df1)
+fit1PolAngDelta = lm(ChgPolAng ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df1)
+fit1PolVelDelta = lm(ChgPolVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df1)
+par(mfrow=c(2,2))
+plot(df1$CartPos,df1$ChgCarPos,xlab="Cart Position @ time t", ylab="Cart Position @ time t+1")
+abline(fit1CarPosDelta$coefficients,col="red",)
+plot(df1$CartVelocity,df1$ChgCarVel,xlab="Cart Velocity @ time t", ylab="Cart Velocity @ time t+1")
+abline(fit1CarVelDelta$coefficients,col="red")
+plot(df1$PoleAngle,df1$ChgPolAng,xlab="Pole Angle @ time t", ylab="Pole Angle @ time t+1")
+abline(fit1PolAngDelta$coefficients,col="red")
+plot(df1$PoleVelocity,df1$ChgPolVel,xlab="Pole Velocity @ time t", ylab="Pole Velocity @ time t+1")
+abline(fit1PolVelDelta$coefficients,col="red")
 
 
-summary(fit1CarPos)
-summary(fit1CarVel)
-summary(fit1PolAng)
-summary(fit1PolVel)
 ```
 
 Add some noise into the data
