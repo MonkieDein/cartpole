@@ -86,22 +86,85 @@ summary(fit1PolAng$coefficients)
 summary(fit1PolVel$coefficients)
 
 # Predict the changes
-fit1CarPosDelta = lm(ChgCarPos ~ CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)
-fit1CarVelDelta = lm(ChgCarVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df1)
-fit1PolAngDelta = lm(ChgPolAng ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df1)
-fit1PolVelDelta = lm(ChgPolVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df1)
-par(mfrow=c(2,2))
-plot(df1$CartPos,df1$ChgCarPos,xlab="Cart Position @ time t", ylab="Cart Position @ time t+1")
-abline(fit1CarPosDelta$coefficients,col="red",)
-plot(df1$CartVelocity,df1$ChgCarVel,xlab="Cart Velocity @ time t", ylab="Cart Velocity @ time t+1")
-abline(fit1CarVelDelta$coefficients,col="red")
-plot(df1$PoleAngle,df1$ChgPolAng,xlab="Pole Angle @ time t", ylab="Pole Angle @ time t+1")
-abline(fit1PolAngDelta$coefficients,col="red")
-plot(df1$PoleVelocity,df1$ChgPolVel,xlab="Pole Velocity @ time t", ylab="Pole Velocity @ time t+1")
-abline(fit1PolVelDelta$coefficients,col="red")
+fit1CarPosDelta = lm(ChgCarPos ~ CartPos + CartVelocity + PoleAngle + PoleVelocity + I(CartPos^2) + I(CartVelocity^2) +I(PoleAngle^2) 
+                     + I(PoleVelocity^2),data = df1)
+fit1CarVelDelta = lm(ChgCarVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity + I(CartPos^2) + I(CartVelocity^2) +I(PoleAngle^2) 
+                     + I(PoleVelocity^2),data = df1)
+fit1PolAngDelta = lm(ChgPolAng ~ CartPos + CartVelocity + PoleAngle + PoleVelocity + I(CartPos^2) + I(CartVelocity^2) +I(PoleAngle^2) 
+                     + I(PoleVelocity^2),data = df1)
+fit1PolVelDelta = lm(ChgPolVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity + I(CartPos^2) + I(CartVelocity^2) +I(PoleAngle^2) 
+                     + I(PoleVelocity^2),data = df1)
+summary(fit1CarPosDelta)
+summary(fit1CarVelDelta)
+summary(fit1PolAngDelta)
+summary(fit1PolVelDelta)
+# par(mfrow=c(2,2))
+# plot(df1$CartPos,df1$ChgCarPos,xlab="Cart Position @ time t", ylab="Cart Position @ time t+1")
+# abline(fit1CarPosDelta$coefficients,col="red",)
+# plot(df1$CartVelocity,df1$ChgCarVel,xlab="Cart Velocity @ time t", ylab="Cart Velocity @ time t+1")
+# abline(fit1CarVelDelta$coefficients,col="red")
+# plot(df1$PoleAngle,df1$ChgPolAng,xlab="Pole Angle @ time t", ylab="Pole Angle @ time t+1")
+# abline(fit1PolAngDelta$coefficients,col="red")
+# plot(df1$PoleVelocity,df1$ChgPolVel,xlab="Pole Velocity @ time t", ylab="Pole Velocity @ time t+1")
+# abline(fit1PolVelDelta$coefficients,col="red")
+
+fit = rbind(fit1CarPosDelta$coefficients,fit1CarVelDelta$coefficients,fit1PolAngDelta$coefficients,fit1PolVelDelta$coefficients)
+write.csv(fit,"Linearfit1.csv")
+
+# Predict the changes
+fit0CarPosDelta = lm(ChgCarPos ~ CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df0)
+fit0CarVelDelta = lm(ChgCarVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df0)
+fit0PolAngDelta = lm(ChgPolAng ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df0)
+fit0PolVelDelta = lm(ChgPolVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df0)
+# par(mfrow=c(2,2))
+# plot(df0$CartPos,df0$ChgCarPos,xlab="Cart Position @ time t", ylab="Cart Position @ time t+1")
+# abline(fit0CarPosDelta$coefficients,col="red",)
+# plot(df0$CartVelocity,df0$ChgCarVel,xlab="Cart Velocity @ time t", ylab="Cart Velocity @ time t+1")
+# abline(fit0CarVelDelta$coefficients,col="red")
+# plot(df0$PoleAngle,df0$ChgPolAng,xlab="Pole Angle @ time t", ylab="Pole Angle @ time t+1")
+# abline(fit0PolAngDelta$coefficients,col="red")
+# plot(df0$PoleVelocity,df0$ChgPolVel,xlab="Pole Velocity @ time t", ylab="Pole Velocity @ time t+1")
+# abline(fit0PolVelDelta$coefficients,col="red")
+
+fit0 = rbind(fit0CarPosDelta$coefficients,fit0CarVelDelta$coefficients,fit0PolAngDelta$coefficients,fit0PolVelDelta$coefficients)
+write.csv(fit0,"Linearfit0.csv")
+
+# Maybe only the angle is required  
 
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Add some noise into the data
 ```{r}

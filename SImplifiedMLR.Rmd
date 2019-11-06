@@ -1,0 +1,68 @@
+---
+title: "SImplifiedMLR"
+author: "Monkie"
+date: "11/5/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+list.of.packages <- c("splines", "devtools", "shinystan", "rstan", "lmerTest")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(splines)
+library(devtools)
+library(shinystan)
+library(rstan)
+library(lmerTest)
+
+rm(list = ls())
+setwd("~/Desktop/GITHUB/cartpole/cartpole")
+df = read.csv("cartpole.csv")
+dfsym = df
+df = rbind(df,dfsym)
+dfsym[,2:5] = -dfsym[,2:5]
+dfsym$Action = as.numeric(dfsym$Action==0)
+df$FutCarPos = c(df$CartPos[-1],0)
+df$FutCarVel = c(df$CartVelocity[-1],0)
+df$FutPolAng = c(df$PoleAngle[-1],0)
+df$FutPolVel = c(df$PoleVelocity[-1],0)
+
+df = df[-(which(df$Step==0)[-1] - 1),]
+df = df[-nobs(df),]
+# df$FutPos[(which(df$Step==0)[-1] - 1)]
+df$ChgCarPos = df$FutCarPos - df$CartPos
+df$ChgCarVel = df$FutCarVel - df$CartVelocity
+df$ChgPolAng = df$FutPolAng - df$PoleAngle
+df$ChgPolVel = df$FutPolVel - df$PoleVelocity
+
+# DISTIRBUTE THE DATA FRAME FOR EACH ACTION
+df0 = df[which(df$Action==0),]
+df1 = df[which(df$Action==1),]
+
+# Predict the changes
+fit1CarPosDelta = lm(ChgCarPos ~  CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)
+fit1CarVelDelta = lm(ChgCarVel ~  CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)
+fit1PolAngDelta = lm(ChgPolAng ~  CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)
+fit1PolVelDelta = lm(ChgPolVel ~  CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)
+summary(fit1CarPosDelta)
+summary(fit1CarVelDelta)
+summary(fit1PolAngDelta)
+summary(fit1PolVelDelta)
+
+fit = rbind(fit1CarPosDelta$coefficients,fit1CarVelDelta$coefficients,fit1PolAngDelta$coefficients,fit1PolVelDelta$coefficients)
+write.csv(fit,"Linearfit1.csv")
+
+# Predict the changes
+fit0CarPosDelta = lm(ChgCarPos ~ CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df0)
+fit0CarVelDelta = lm(ChgCarVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df0)
+fit0PolAngDelta = lm(ChgPolAng ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df0)
+fit0PolVelDelta = lm(ChgPolVel ~ CartPos + CartVelocity + PoleAngle + PoleVelocity ,data = df0)
+
+
+fit0 = rbind(fit0CarPosDelta$coefficients,fit0CarVelDelta$coefficients,fit0PolAngDelta$coefficients,fit0PolVelDelta$coefficients)
+write.csv(fit0,"Linearfit0.csv")
+
+# Maybe only the angle is required  
+```
+

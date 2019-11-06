@@ -9,7 +9,7 @@ def readinput(filename):
     f = open(filename,"r")
     variable = f.read().split('\n')
     f.close()
-    variable = variable[1:-1]
+    variable = variable[1:]
     variable =[eval(i.split(',')[1]) for i in variable]
     return variable
 

@@ -14,14 +14,14 @@ random.seed(2019)
 if(generate_samples):
     print("Generating samples ...")
 
-    with open('cartpole50.csv', 'w', newline='') as csvfile:
+    with open('cartpole.csv', 'w', newline='') as csvfile:
         samplewriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
 
         samplewriter.writerow(["Step", "CartPos", "CartVelocity", "PoleAngle", \
                                 "PoleVelocity", "Action", "Reward"])
         
         laststate = None
-        for k in tqdm.trange(50):
+        for k in tqdm.trange(2000):
             env.reset()
             done = False
             count = 0
