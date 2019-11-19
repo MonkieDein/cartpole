@@ -18,28 +18,29 @@ library(lmerTest)
 
 rm(list = ls())
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
-df = read.csv("cartpole.csv")
+df = read.csv("cartpole50.csv") #df = read.csv("cartpole50.csv") or = read.csv("cartpole.csv")
+# Create symmetric data
 dfsym = df
-df = rbind(df,dfsym)
 dfsym[,2:5] = -dfsym[,2:5]
 dfsym$Action = as.numeric(dfsym$Action==0)
+# Combined symmetric data
+df = rbind(df,dfsym)
+# Make a variable called FutureCarPosition 
 df$FutCarPos = c(df$CartPos[-1],0)
 df$FutCarVel = c(df$CartVelocity[-1],0)
 df$FutPolAng = c(df$PoleAngle[-1],0)
 df$FutPolVel = c(df$PoleVelocity[-1],0)
-
+# Remove the last row where there is no transition after than
 df = df[-(which(df$Step==0)[-1] - 1),]
 df = df[-nobs(df),]
-# df$FutPos[(which(df$Step==0)[-1] - 1)]
+# Create variable change
 df$ChgCarPos = df$FutCarPos - df$CartPos
 df$ChgCarVel = df$FutCarVel - df$CartVelocity
 df$ChgPolAng = df$FutPolAng - df$PoleAngle
 df$ChgPolVel = df$FutPolVel - df$PoleVelocity
-
 # DISTIRBUTE THE DATA FRAME FOR EACH ACTION
 df0 = df[which(df$Action==0),]
 df1 = df[which(df$Action==1),]
-
 # Predict the changes
 fit1CarPosDelta = lm(ChgCarPos ~  CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)
 fit1CarVelDelta = lm(ChgCarVel ~  CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df1)

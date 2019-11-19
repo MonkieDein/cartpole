@@ -41,8 +41,8 @@ def dynamicChoseaction (state):
             expectedS1[j] = expectedS1[j] + variable1[j][i+1]*state[i]
 #    expectedS1 = [1.949e-01+state[1]*1.001,-0.0021675+1.1180181*state[2],-0.2890882+1.0287138*state[3]]
              
-    sum0 = abs(expectedS0[2])#sum([abs(i) for i in expectedS0 ])
-    sum1 = abs(expectedS1[2])#sum([abs(i) for i in expectedS1 ])
+    sum0 = abs(expectedS0[2])+abs(expectedS0[1])+abs(expectedS0[3])#sum([abs(i) for i in expectedS0 ])
+    sum1 = abs(expectedS1[2])+abs(expectedS1[1])+abs(expectedS1[3])#sum([abs(i) for i in expectedS1 ])
 
     if sum0 < sum1:
         return 0
