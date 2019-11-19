@@ -63,7 +63,78 @@ fit0PolVelDelta = lm(ChgPolVel ~ CartPos + CartVelocity + PoleAngle + PoleVeloci
 
 fit0 = rbind(fit0CarPosDelta$coefficients,fit0CarVelDelta$coefficients,fit0PolAngDelta$coefficients,fit0PolVelDelta$coefficients)
 write.csv(fit0,"Linearfit0.csv")
+# Maybe only the angle is required //  considering everything is better. Only consider angle might result unwind result  
+```
 
-# Maybe only the angle is required  
+Implement Bayesian Simulation
+```{r}
+stan_model = '
+data {
+    // Define input data in this block
+    int n;  // Number of samples
+    int m;  // Number of features
+    matrix[n, m] features;
+    vector[n] y;  // outcome
+}
+transformed data {
+    // Modify / transform input data.
+    // This block runs once.
+}
+parameters {
+    // These are random parameters which we
+    // want to estimate
+    vector[m] beta;  // Coefficients
+    real<lower=0> epsilon;  // Uncertainty / unexplained variance
+}
+transformed parameters {
+    // Create quantities derived from the parameters.
+    // ytras = log(y)
+    // Runs on every evaluation of log-prob
+}
+model {
+    // Define your model here!
+    y ~ normal(features * beta , epsilon);
+    
+    // Equivalent to:
+    // increment_log_prob(normal_log(y, features * beta, epsilon));
+}
+generated quantities {
+    // Can use to simulate / predict using parameters
+    // Runs once per MCMC step after warmup
+}
+'
+# -------------------------------
+# Feed in given known data Do it for action 0 first
+# -------------------------------
+X = df0[,2:5]
+Y = df0[,12]
+# Include intercept
+X = cbind(X,1)
+num_data <- length(Y)
+num_feat <- ncol(X)
+# Fit Linear regression
+lin_reg = stan(model_code=stan_model,
+               model_name="MLR on cartpole",
+               data=list(n = num_data, 
+                         m = num_feat, 
+                         features = X, 
+                         y  = Y), 
+               iter=10000, chains=4, 
+               warmup=5000)
+
+# extract posterior samples for each parameter
+# Recreate data
+fit1_samples = rstan::extract(lin_reg)
+# str(fit1_samples)
+A_sample = fit1_samples[[1]]
+
+# qplot(A_sample[,1],main = "lambda") 
+# # Write CSV in R
+# write.csv(A_sample[,1], file = "DamageM_Spray.csv")
+# write.csv(A_sample[,2], file = "DamageC_Spray.csv")
+# epsilon_Spray = fit1_samples[[2]]
+# write.csv(epsilon_Spray, file = "DamageUnexplainable_Spray.csv")
+
+
 ```
 
