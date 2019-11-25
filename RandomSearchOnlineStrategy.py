@@ -18,7 +18,7 @@ import numpy as np
 def run_episode(env, parameters):  
     observation = env.reset()
     totalreward = 0
-    for _ in range(200):
+    for _ in range(1000):
         env.render()
         action = 0 if np.matmul(parameters,observation) < 0 else 1
         observation, reward, done, info = env.step(action)
@@ -47,6 +47,9 @@ env.close()
 
 for _ in range(100):  
     parameters = np.random.rand(4) * 2 - 1
+#    parameters = np.array([-0.0581790 ,-0.1799306 , 0.7634917 , 0.6782414]) #SOlve1
+#    parameters = np.array([-0.1154761 , 0.3229980 , 0.7281496 , 0.7370187]) #SOlve2
+    
     reward = run_episode(env,parameters)
     if reward > bestreward:
         bestreward = reward

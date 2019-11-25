@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-list.of.packages <- c("splines", "devtools", "shinystan", "rstan", "lmerTest")
+list.of.packages <- c("splines", "devtools", "shinystan", "rstan", "lmerTest","gdata","foreach")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -15,10 +15,16 @@ library(devtools)
 library(shinystan)
 library(rstan)
 library(lmerTest)
+library(gdata)
+library(foreach) # For parallel programming purposes
 
 rm(list = ls())
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
 df = read.csv("cartpole50.csv") #df = read.csv("cartpole50.csv") or = read.csv("cartpole.csv")
+
+#Create Penalty for dying 
+df$Reward[which(df$Reward!=1)-1] = -200
+
 # Create symmetric data
 dfsym = df
 dfsym[,2:5] = -dfsym[,2:5]
@@ -31,8 +37,10 @@ df$FutCarVel = c(df$CartVelocity[-1],0)
 df$FutPolAng = c(df$PoleAngle[-1],0)
 df$FutPolVel = c(df$PoleVelocity[-1],0)
 # Remove the last row where there is no transition after than
-df = df[-(which(df$Step==0)[-1] - 1),]
-df = df[-nobs(df),]
+df = df[-(which(df$Reward==0)),]
+# df = df[-(which(df$Step==0)[-1] - 1),]
+# df = df[-nobs(df),]
+
 # Create variable change
 df$ChgCarPos = df$FutCarPos - df$CartPos
 df$ChgCarVel = df$FutCarVel - df$CartVelocity
@@ -52,7 +60,12 @@ summary(fit1PolAngDelta)
 summary(fit1PolVelDelta)
 
 fit = rbind(fit1CarPosDelta$coefficients,fit1CarVelDelta$coefficients,fit1PolAngDelta$coefficients,fit1PolVelDelta$coefficients)
-write.csv(fit,"Linearfit1.csv")
+# MAKE DIRECTORY AND WRITE FILE INTO IT.
+dirname = "simplifiedMLR"
+if (!dir.exists(dirname)){
+  dir.create(dirname)
+}
+write.csv(fit,paste0(dirname,"/","Linearfit1.csv"))
 
 # Predict the changes
 fit0CarPosDelta = lm(ChgCarPos ~ CartPos + CartVelocity + PoleAngle + PoleVelocity,data = df0)
@@ -62,12 +75,44 @@ fit0PolVelDelta = lm(ChgPolVel ~ CartPos + CartVelocity + PoleAngle + PoleVeloci
 
 
 fit0 = rbind(fit0CarPosDelta$coefficients,fit0CarVelDelta$coefficients,fit0PolAngDelta$coefficients,fit0PolVelDelta$coefficients)
-write.csv(fit0,"Linearfit0.csv")
+write.csv(fit0,paste0(dirname,"/","Linearfit0.csv"))
 # Maybe only the angle is required //  considering everything is better. Only consider angle might result unwind result  
 ```
 
-Implement Bayesian Simulation
+
+Save initial data
 ```{r}
+dirname = "DATA"
+if (!dir.exists(dirname)){
+  dir.create(dirname)
+}
+write.csv(df,paste0(dirname,"/","data.csv"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GENERATE DATA Implement Bayesian Simulation (Begin)
+```{r}
+gen_data = FALSE
+
+if (gen_data){
+dirname = "BAYESMLR-V1"
+if (!dir.exists(dirname)){
+  dir.create(dirname)
+}
+
 stan_model = '
 data {
     // Define input data in this block
@@ -103,38 +148,77 @@ generated quantities {
     // Runs once per MCMC step after warmup
 }
 '
+
 # -------------------------------
-# Feed in given known data Do it for action 0 first
+# Feed in given known data Do it for action 0 first 
 # -------------------------------
+# SEPARATE THE FIT Y MULTIPLE TIME FOR EACH VARIABLES.
+
 X = df0[,2:5]
-Y = df0[,12]
-# Include intercept
 X = cbind(X,1)
-num_data <- length(Y)
-num_feat <- ncol(X)
-# Fit Linear regression
-lin_reg = stan(model_code=stan_model,
-               model_name="MLR on cartpole",
-               data=list(n = num_data, 
-                         m = num_feat, 
-                         features = X, 
-                         y  = Y), 
-               iter=10000, chains=4, 
-               warmup=5000)
+# i=12
+# for (i in 12:15){
+foreach (i=12:15) %do% {
+  Y = df0[,i]   # 12
+  # Include intercept
+  num_data <- length(Y)
+  num_feat <- ncol(X)
+  # Fit Linear regression
+  lin_reg = stan(model_code=stan_model,
+                 model_name="MLR on cartpole",
+                 data=list(n = num_data, 
+                           m = num_feat, 
+                           features = X, 
+                           y  = Y), 
+                 iter=10000, chains=4, 
+                 warmup=5000,control = list(adapt_delta = 0.99))
+  
+  # extract posterior samples for each parameter
+  # Recreate data
+  fit1_samples = rstan::extract(lin_reg)
+  # str(fit1_samples)
+  A_sample = fit1_samples[[1]]
+  colnames(A_sample) = c("CartPos" ,"CartVelocity"  ,"PoleAngle" ,"PoleVelocity" ,"CONSTANT")
+  # Write CSV in R
+  write.csv(A_sample, file = paste0(dirname,"/",colnames(df0)[i],"BayesFit0.csv")) # 12
+  Error = fit1_samples[[2]]
+  write.csv(Error, file = paste0(dirname,"/",colnames(df0)[i],"Bayes_err_Action0.csv"))
+}
+# -------------------------------
+# Feed in given known data Do it for action 1  
+# -------------------------------
+# SEPARATE THE FIT Y MULTIPLE TIME FOR EACH VARIABLES.
 
-# extract posterior samples for each parameter
-# Recreate data
-fit1_samples = rstan::extract(lin_reg)
-# str(fit1_samples)
-A_sample = fit1_samples[[1]]
+X = df1[,2:5]
+X = cbind(X,1)
+# for (i in 12:15){
+foreach (i=12:15) %do% {
+  Y = df1[,i]   # 12
+  # Include intercept
+  num_data <- length(Y)
+  num_feat <- ncol(X)
+  # Fit Linear regression
+  lin_reg = stan(model_code=stan_model,
+                 model_name="MLR on cartpole",
+                 data=list(n = num_data, 
+                           m = num_feat, 
+                           features = X, 
+                           y  = Y), 
+                 iter=10000, chains=4, 
+                 warmup=5000)
+  
+  # extract posterior samples for each parameter
+  # Recreate data
+  fit1_samples = rstan::extract(lin_reg)
+  # str(fit1_samples)
+  A_sample = fit1_samples[[1]]
+  colnames(A_sample) = c("CartPos" ,"CartVelocity"  ,"PoleAngle" ,"PoleVelocity" ,"CONSTANT")
+  # Write CSV in R
+  write.csv(A_sample, file = paste0(dirname,"/",colnames(df1)[i],"BayesFit1.csv")) # 12
+  Error = fit1_samples[[2]]
+  write.csv(Error, file = paste0(dirname,"/",colnames(df1)[i],"Bayes_err_Action1.csv"))
+}
 
-# qplot(A_sample[,1],main = "lambda") 
-# # Write CSV in R
-# write.csv(A_sample[,1], file = "DamageM_Spray.csv")
-# write.csv(A_sample[,2], file = "DamageC_Spray.csv")
-# epsilon_Spray = fit1_samples[[2]]
-# write.csv(epsilon_Spray, file = "DamageUnexplainable_Spray.csv")
-
-
+}
 ```
 
