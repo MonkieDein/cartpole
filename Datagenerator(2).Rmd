@@ -125,4 +125,19 @@ Best= which(rowMeans(Combined_score)==max(rowMeans(Combined_score)))
 # Combined_B[Best,]
 # Combined_score[Best,]
 partime
+
+cat("\n\nBest Policy x for Ax=B formulation\n")
+Combined_B[Best,]
+
 ```
+
+From Checkdatagenerator(2test).Rmd
+Time for a regular for loop 82.061
+Time for a single foreach do loop is 73.368
+
+Our new time for 2 foreach do loop is 62.248
+Our new time for 2 foreach dopar loop is 16.638
+
+its about 4 times faster with dopar compare to do loop ------ 5 times faster compare to a regular for loop.
+
+

@@ -41,21 +41,23 @@ def run(env):
 bestparams = None  
 bestreward = 0  
 
-for i in range(200):
-    run(env)
-env.close()
+#for i in range(200):
+#    run(env)
+#env.close()
 
+# Instead of randomly select policy, we use the policy we generate from Checkdatagenerator(2).Rmd
 for _ in range(100):  
-    parameters = np.random.rand(4) * 2 - 1
+#    parameters = np.random.rand(4) * 2 - 1
 #    parameters = np.array([-0.0581790 ,-0.1799306 , 0.7634917 , 0.6782414]) #SOlve1
 #    parameters = np.array([-0.1154761 , 0.3229980 , 0.7281496 , 0.7370187]) #SOlve2
-    
+    parameters = np.array([-0.03871037,  0.38610456,  0.36964082 , 0.69800708])
     reward = run_episode(env,parameters)
     if reward > bestreward:
         bestreward = reward
         bestparams = parameters
         # considered solved if the agent lasts 200 timesteps
-#        if reward == 200:
-#            break
+        if reward == 500:
+            print("Solve at ",_,"fail")
+            break
         
 env.close()

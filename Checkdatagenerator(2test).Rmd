@@ -69,7 +69,7 @@ This test generator techinically generate a solution for the random search given
 ```{r}
 # Make condition Angle, since we are not really sure what is the condition angle, we use a slight conservative angle where is 0.96 of the angle we have seen considered lose.
 CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
-n=10
+n=100
 # Make a matrix that cobined all the score
 Combined_score = matrix(0,n,5)
 # Make a matrix that use random value Constant
@@ -77,9 +77,10 @@ Combined_B = matrix(runif(4*n,-1,1),n,4)
 
 i=1
 registerDoParallel(cores=detectCores())
-# foreach (i= 1:n) %do% {
 fortime = system.time(
-for (i in 1:n){
+# for (i in 1:n){
+foreach (i= 1:n) %do% {
+
   Combined_B[i,]=runif(4,-1,1)
   j=1
   for (i2 in 1:5){
@@ -117,12 +118,13 @@ registerDoParallel(cores=1)
 stopImplicitCluster()
 
 Best= which(rowMeans(Combined_score)==max(rowMeans(Combined_score)))
-Combined_B[Best,]
+# Combined_B[Best,]
+fortime
 ```
 Plug in the best policy to random seach and it beats the game easily implies our generated simulation is good.
 
 
-
-
-
+Time for a regular for loop 82.061
+Time for a single foreach do loop is 73.368
+we will now try to use forpar and hope for a masive improvement: refer to Datagenerator(2).Rmd
 
