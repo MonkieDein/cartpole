@@ -1,5 +1,5 @@
-#from choseaction import *
-from dynamicChoseaction import *
+from choseaction import *
+#from dynamicChoseaction import *
 ## Generate samples
 #import pandas as pd
 import random
@@ -18,13 +18,15 @@ random.seed(2019)
 if(generate_samples):
     print("Generating samples ...")
 
-    with open(('cartpole'+version+'.csv'), 'w', newline='') as csvfile:
+    with open((version+'cartpole'+'.csv'), 'w', newline='') as csvfile:
         samplewriter = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
 
-        samplewriter.writerow(["Step", "CartPos", "CartVelocity", "PoleAngle", \
+        samplewriter.writerow(["Step", "CartPos", "CartVelocity", "PoleAngle", 
                                 "PoleVelocity", "Action", "Reward"])
         
         laststate = None
+        
+        totrew = []
         for k in tqdm.trange(20):
             env.reset()
             done = False
@@ -47,11 +49,14 @@ if(generate_samples):
                 
                 
                 env.render()
-#                action = choseaction(tuple(state))
-                action = dynamicChoseaction(tuple(state))
+#                action = -1
+                action = choseaction(tuple(state))
+#                action = dynamicChoseaction(tuple(state))
                 
                 if action == -1:
                     action = env.action_space.sample()
                 
-            print("\n",j)
+            totrew.append(j)
+    print("\n",*totrew)
+    print("Average\t\t",sum(totrew)/len(totrew))
     env.close()

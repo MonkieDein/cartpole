@@ -9,15 +9,22 @@ def readinput(filename):
     f = open(filename,"r")
     variable = f.read().split('\n')
     f.close()
-    variable = variable[1:]
+    variable = variable[1:-1]
     variable =[eval(i.split(',')[1]) for i in variable]
     return variable
 
 
 
+#version = "Mdp10state/a"
+version = "Mdp10state/all"
+#version = "Mdp10state/a2"
+#version = "Mdp10state/all2"
+#version = "Mdp20stateNOPOS/a4"
+#version = "Mdp20stateNOPOS/all4"
+#version = "Mdp10stateNOPOS/all3"
 
-version = "a4"
-if version!="a3" and version!="a4":
+#version = "a4"
+if version!="Mdp10stateNOPOS/all3" and version!="Mdp10stateNOPOS/a3" and version!="Mdp20stateNOPOS/a4"and version!="Mdp20stateNOPOS/all4":
     cart_quantile = readinput( version +"_CartPositionQuantile.csv")
 else :
     cart_quantile = [1]
@@ -36,8 +43,10 @@ policy= readinput( version +"_policy.csv")
 #print(pole_angle )
 #print(pole_velocity )
 
+#MAKING INDEX START FROM 0
 statemap = [i-1 for i in statemap]
 statearr = [i-1 for i in statearr]
+#clarify = [statemap[i] for i in statearr]
 
 def choseaction (state):
     

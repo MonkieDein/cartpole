@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook
+author: "Monkie"
+date: "11/5/2019"
+output: pdf_document
 ---
 10 STATES FOR EACH VARIABLES (no position variable)
 
@@ -10,7 +12,10 @@ Set working directory and also read data
 rm(list = ls())
 # setwd("~/Desktop/AML/cartpole")
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
-df = read.csv("cartpole.csv")
+df = read.csv("cartpole.csv")#50
+source("csvfunction.R")
+df = CreateSym(df)
+
 ```
 
 Data Analyze
@@ -27,7 +32,7 @@ PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:10)*0.1)
 df2 = df
 # NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
 # create penalty
-df2$Reward[which(df2$Reward==0)] = -50 # penalty -50
+df2$Reward[which(df2$Reward==0)] = -500 # penalty -50
 # NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
 n = length(df2$Step)
 
@@ -63,19 +68,19 @@ Occurence2 = StateSpace
 df2$State = ((df2$CartVelocity-1) + car_vel_len*(df2$PoleAngle-1) + car_vel_len*pol_ang_len*(df2$PoleVelocity-1))+1
 # create rewawrd by taking average reward
 for (i in 1:length(df2$Step)){
-  if (df2$Action[df2$State[i]] == 1){
+  if (df2$Action[i] == 1){
     ExpectedRew1[df2$State[i]] = ExpectedRew1[df2$State[i]] + df2$Reward[i]
     Occurence1[df2$State[i]] = Occurence1[df2$State[i]] + 1    
   }
-  if (df2$Action[df2$State[i]] == 0){
+  if (df2$Action[i] == 0){
     ExpectedRew2[df2$State[i]] = ExpectedRew2[df2$State[i]] + df2$Reward[i]
     Occurence2[df2$State[i]] = Occurence2[df2$State[i]] + 1    
   }
 }
 data1 = which(Occurence1 >0)
-ExpectedRew1[data1] = ExpectedRew1[data1]/Occurence1[data1] 
+ExpectedRew1[data1] = ExpectedRew1[data1]#/Occurence1[data1] 
 data2 = which(Occurence2 >0)
-ExpectedRew2[data2] = ExpectedRew2[data2]/Occurence2[data2] 
+ExpectedRew2[data2] = ExpectedRew2[data2]#/Occurence2[data2] 
 # create summry 
 summary(ExpectedRew1 )
 summary(Occurence1 )
@@ -156,8 +161,12 @@ result=(ExpectedRew1 + T1 %*% v)>(ExpectedRew2 + T2 %*% v)
 
 summary(v)
 summary(result)
-
-k="a3"
+dirname = "Mdp10stateNOPOS"
+if (!dir.exists(dirname)){
+  dir.create(dirname)
+}
+k=paste0(dirname,"/all3")
+# k=paste0(dirname,"/a3")
 if (TRUE){
   write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))
   write.csv(PoleAngleQuantile,paste0(k,"_PoleAngleQuantile.csv"))

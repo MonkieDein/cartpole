@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "RegularMDP+Bayes"
 author: "Monkie"
 date: "11/5/2019"
 output: pdf_document
@@ -11,9 +11,18 @@ Set working directory and also read data
 rm(list = ls())
 # setwd("~/Desktop/AML/cartpole")
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
-df = read.csv("cartpole.csv")
+
+# df = read.csv("cartpole.csv")
+
+# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
+# Need to run BayesMdpParallel(3).Rmd 
 source("csvfunction.R")
+dirname = "BayesData"
+filename = "bayes"
+k = 2
+df = BindCsv(dirname,filename,k)
 df = CreateSym(df)
+# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
 
 ```
 
@@ -30,10 +39,8 @@ PoleAngleQuantile  = quantile(df$PoleAngle,(0:10)*0.1)
 PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:10)*0.1)
 # aggregating state initialization
 df2 = df
-# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
 # create penalty
-df2$Reward[which(df2$Reward==0)] = -50 # penalty -50
-# NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW NEW
+# df2$Reward[which(df2$Reward==0)] = -50 # penalty -50
 n = length(df2$Step)
 df2$CartPos = 0
 df2$CartVelocity = 0
@@ -134,7 +141,7 @@ act2 = which(df2$Action==0)
 for (i in act2){
   T2[df2$State[i],df2$futureState[i]]=T2[df2$State[i],df2$futureState[i]]+1
 }
-# making it a pdf
+
 for(i in 1:len_state){
   s1 =sum(T1[i,])
   s2 =sum(T2[i,])
@@ -157,20 +164,20 @@ v = rep(0,len_state)
 for (n in 1:200){
   # v2 =pmax(ExpectedRew1 + discount*T1 %*% v, ExpectedRew2 + discount*T2 %*% v)
   # cat(n,max(v2-v),"\n")
-  v  =pmax(T1 %*%(ExpectedRew1 + discount* v), T2 %*%(ExpectedRew2 +  discount*  v))
+  v  =pmax(ExpectedRew1 + discount*T1 %*% v, ExpectedRew2 +  discount* T2 %*% v)
 }
 
-result= (T1 %*%(ExpectedRew1 + v))>(T2 %*%(ExpectedRew2 +  v))
+result=(ExpectedRew1 + T1 %*% v)>(ExpectedRew2 + T2 %*% v)
 # OUTPUT
 
 summary(v)
 summary(result)
 
-dirname = "Mdp10state"
+dirname = "Bayes10s"
 if (!dir.exists(dirname)){
   dir.create(dirname)
 }
-k=paste0(dirname,"/all")
+k=paste0(dirname,"/a")
 if (TRUE){
   write.csv(CartPosQuantile,paste0(k,"_CartPositionQuantile.csv"))
   write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))

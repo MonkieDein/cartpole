@@ -1,9 +1,11 @@
 ---
-title: "GeneratingSamples"
+title: "BayesMdpParallel(3).Rmd"
 author: "Monkie"
-date: "11/21/2019"
+date: "11/25/2019"
 output: pdf_document
 ---
+
+In this section we simulate a similar situation as the Datafenerator(2) for MDP, where we are not using a = BX formulation but instead MDP Value Iteration approach.
 
 In this program we generate more data for the CARTPOLE problem GIVEN BAYES OUTPUT AND initial input
 ```{r setup, include=FALSE}
@@ -25,6 +27,7 @@ setwd("~/Desktop/GITHUB/cartpole/cartpole")
 # realdf = read.csv("cartpole.csv")
 df = read.csv("DATA/data.csv")[,-1]
 ```
+
 
 ```{r}
 cn = c("Step" ,"CartPos", "CartVelocity" ,"PoleAngle", "PoleVelocity" ,"Action", "Reward","FutCarPos","FutCarVel", "FutPolAng" ,"FutPolVel","ChgCarPos","ChgCarVel","ChgPolAng","ChgPolVel" )
@@ -64,68 +67,105 @@ for (i in 12:15)  {
 }
 ```
 
-Generate data & test generator
-This test generator techinically generate a solution for the random search given the 50 datasets.
+Make function for forpar
 ```{r}
-# Make condition Angle, since we are not really sure what is the condition angle, we use a slight conservative angle where is 0.96 of the angle we have seen considered lose.
-CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
-n=100
-# Make a matrix that cobined all the score
-Combined_score = matrix(0,n,5)
-# Make a matrix that use random value Constant
-Combined_B = matrix(runif(4*n,-1,1),n,4)
-
-i=1
-registerDoParallel(cores=detectCores())
-fortime = system.time(
-# for (i in 1:n){
-foreach (i= 1:n) %do% {
-
-  Combined_B[i,]=runif(4,-1,1)
-  j=1
-  for (i2 in 1:5){
+play <- function(filename,i,i2,init,B,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1){
+    j = sample(1:19000, 1)
     step = 0
-    state = matrix(c(init[(i-1)*5+i2,],1))
-    #Update state
-    run = TRUE
-    while (run&&(step<1000)){
-      if ((sum(Combined_B[i,]*state[1:4]))<0){
+    state = c(init[(i-1)*5+i2,],1)
+    a = 0
+    while (step<1000){
+      if ((sum(B*state[1:4]))<0){
       state[1] = state[1] + sum(ChgCarPos0[j,] * state )
       state[2] = state[2] + sum(ChgCarVel0[j,] * state )
       state[3] = state[3] + sum(ChgPolAng0[j,] * state )
       state[4] = state[4] + sum(ChgPolVel0[j,] * state )
+      a = 0
       } else {
       state[1] = state[1] + sum(ChgCarPos1[j,] * state )
       state[2] = state[2] + sum(ChgCarVel1[j,] * state )
       state[3] = state[3] + sum(ChgPolAng1[j,] * state )
       state[4] = state[4] + sum(ChgPolVel1[j,] * state )
+      a = 1
       }
       j=j + 1
       
       #If exceed some angle then we done.
-    #  if (state[3]>CondtionAngle | state[3]<(-CondtionAngle)){
-      if (abs(state[3])>CondtionAngle){  
-        run=FALSE
+      if (abs(state[3])>CondtionAngle){
+        write.table(t(c(step,state[1:4],a,0)), filename, sep = ",", col.names = !file.exists(filename),row.names = FALSE, append = T)
+        return(step)
       }
+      write.table(t(c(step,state[1:4],a,1)), filename, sep = ",", col.names = !file.exists(filename),row.names = FALSE, append = T)
+
       step = step+1
-    }  
-    # Save the final score in combined score
-    Combined_score[i,i2] = step
-  }
-  
+    }
+    return(step)
 }
+```
+
+
+Generate data & test generator
+This test generator techinically generate a solution for the random search given the 50 datasets.
+```{r}
+
+# Make condition Angle, since we are not really sure what is the condition angle, we use a slight conservative angle where is 0.96 of the angle we have seen considered lose.
+CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
+n=100
+# Make a matrix that cobined all the score
+# Make a matrix that use random value Constant
+Combined_B = matrix(runif(4*n,-1,1),n,4)
+i=1
+registerDoParallel(cores=detectCores())
+
+dirname = "BayesData"
+if (!dir.exists(dirname)){
+  dir.create(dirname)
+}
+# Create column names writting in the folder
+k = 2
+for (i2 in 1:k){
+  filename = paste0(dirname,"/","bayes",i2,".csv")
+  if (!file.exists(filename)){
+      write.table(t(cn[1:7]), filename ,sep=",",col.names=FALSE,row.names = FALSE)
+  }
+}
+
+partime = system.time(
+# Save the final score in combined score
+Combined_score <- foreach (i2= 1:k,.combine = 'cbind') %:% 
+  foreach (i= 1:n,.combine = 'c') %dopar% {
+     play(paste0(dirname,"/","bayes",i2,".csv"),i,i2,init,Combined_B[i,],CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1)
+
+}
+
 )
 registerDoParallel(cores=1)
 stopImplicitCluster()
 
 Best= which(rowMeans(Combined_score)==max(rowMeans(Combined_score)))
 # Combined_B[Best,]
-fortime
+# Combined_score[Best,]
+partime
+
+cat("\n\nBest Policy x for a = BX formulation\n")
+Combined_B[Best,]
+
 ```
-Plug in the best policy to random seach and it beats the game easily implies our generated simulation is good.
 
 
-Time for a regular for loop 82.061
-Time for a single foreach do loop is 73.368
-we will now try to use forpar and hope for a masive improvement: refer to Datagenerator(2).Rmd
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

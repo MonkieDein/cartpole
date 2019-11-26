@@ -69,7 +69,7 @@ Make function for forpar
 ```{r}
 play <- function(i,i2,init,B,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1){
     j = sample(1:19000, 1)
-    step = 1
+    step = 0
     state = c(init[(i-1)*5+i2,],1)
     while (step<1000){
       if ((sum(B*state[1:4]))<0){
@@ -84,11 +84,12 @@ play <- function(i,i2,init,B,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgP
       state[4] = state[4] + sum(ChgPolVel1[j,] * state )
       }
       j=j + 1
-      step = step+1
+      
       #If exceed some angle then we done.
       if (abs(state[3])>CondtionAngle){
         return(step)
       }
+      step = step+1
     }
     return(step)
 }
@@ -126,7 +127,7 @@ Best= which(rowMeans(Combined_score)==max(rowMeans(Combined_score)))
 # Combined_score[Best,]
 partime
 
-cat("\n\nBest Policy x for Ax=B formulation\n")
+cat("\n\nBest Policy x for a = BX formulation\n")
 Combined_B[Best,]
 
 ```
