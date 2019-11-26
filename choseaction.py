@@ -17,6 +17,7 @@ def readinput(filename):
 
 #version = "Mdp10state/a"
 version = "Mdp10state/all"
+#version = "Mdp20state/all"
 #version = "Mdp10state/a2"
 #version = "Mdp10state/all2"
 #version = "Mdp20stateNOPOS/a4"
