@@ -1,0 +1,92 @@
+---
+title: "BayesMDP"
+author: "Monkie"
+date: "11/26/2019"
+output: pdf_document
+---
+
+```{r}
+rm(list = ls())
+# setwd("~/Desktop/AML/cartpole")
+setwd("~/Desktop/GITHUB/cartpole/cartpole")
+df = read.csv("cartpole50.csv")
+source("csvfunction.R")
+df = CreateSym(df)
+```
+
+```{r}
+summary(df)
+Splitstate = 20
+summary(df)
+# MAKE QUANTILE
+CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate-1))*(1/Splitstate))
+CartVelQuantile  = quantile(df$CartVelocity,(0:(Splitstate-1))*(1/Splitstate))
+PoleAngleQuantile  = quantile(df$PoleAngle,(0:(Splitstate-1))*(1/Splitstate))
+PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate-1))*(1/Splitstate))
+
+```
+
+```{r setup, include=FALSE}
+run <- function(state,action,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1){
+    j = sample(1:20000, 1)
+    a = 0
+    if (action==0){
+    state[1] = state[1] + sum(ChgCarPos0[j,] * state )
+    state[2] = state[2] + sum(ChgCarVel0[j,] * state )
+    state[3] = state[3] + sum(ChgPolAng0[j,] * state )
+    state[4] = state[4] + sum(ChgPolVel0[j,] * state )
+    a = 0
+    } else {
+    state[1] = state[1] + sum(ChgCarPos1[j,] * state )
+    state[2] = state[2] + sum(ChgCarVel1[j,] * state )
+    state[3] = state[3] + sum(ChgPolAng1[j,] * state )
+    state[4] = state[4] + sum(ChgPolVel1[j,] * state )
+    a = 1
+    }
+    return(state[1:4])
+}
+
+var2state <- function(CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile){
+  
+}
+```
+
+
+```{r}
+# TOtal state space
+n = Splitstate^4
+# Iteration for each state space
+iteration = 100
+# Run for loop to generate data
+Combined_score <- foreach (i2= 1:iteration,.combine = 'rbind') %:% 
+  foreach (i= 1:n,.combine = 'c') %dopar% {
+     run(state,action,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1)
+  }
+
+```
+
+
+
+
+```{r}
+dirname = "Bayes10s"
+if (!dir.exists(dirname)){
+  dir.create(dirname)
+}
+k=paste0(dirname,"/a")
+if (TRUE){
+  write.csv(CartPosQuantile,paste0(k,"_CartPositionQuantile.csv"))
+  write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))
+  write.csv(PoleAngleQuantile,paste0(k,"_PoleAngleQuantile.csv"))
+  write.csv(PoleVelocityQuantile,paste0(k,"_PoleVelocityQuantile.csv"))
+  
+  write.csv(StateSpace,paste0(k,"_StateMap.csv"))
+  write.csv(stay,paste0(k,"_StateArr.csv"))
+  
+  write.csv(ExpectedRew1,paste0(k,"_Reward1.csv"))
+  write.csv(ExpectedRew2,paste0(k,"_Reward2.csv"))
+
+  write.csv(as.numeric(result),paste0(k,"_policy.csv"))
+}
+```
+

@@ -16,7 +16,7 @@ df = CreateSym(df)
 
 
 ```{r}
-Splitstate = 10
+Splitstate = 20
 summary(df)
 # MAKE QUANTILE
 CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate-1))*(1/Splitstate))
