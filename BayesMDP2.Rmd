@@ -6,64 +6,170 @@ output: pdf_document
 ---
 
 ```{r}
+library(gsubfn)
+library(doParallel)
+library(foreach)
 rm(list = ls())
 # setwd("~/Desktop/AML/cartpole")
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
-df = read.csv("cartpole50.csv")
-source("csvfunction.R")
-df = CreateSym(df)
+df = read.csv("DATA/data.csv")[,-1]
+
+# df = read.csv("cartpole50.csv")
+# source("csvfunction.R")
+# df = CreateSym(df)
 ```
 
 ```{r}
 summary(df)
-Splitstate = 20
+Splitstate = 10
 summary(df)
 # MAKE QUANTILE
-CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate-1))*(1/Splitstate))
-CartVelQuantile  = quantile(df$CartVelocity,(0:(Splitstate-1))*(1/Splitstate))
-PoleAngleQuantile  = quantile(df$PoleAngle,(0:(Splitstate-1))*(1/Splitstate))
-PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate-1))*(1/Splitstate))
-
+CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate))*(1/Splitstate))
+CartVelQuantile  = quantile(df$CartVelocity,(0:(Splitstate))*(1/Splitstate))
+PoleAngleQuantile  = quantile(df$PoleAngle,(0:(Splitstate))*(1/Splitstate))
+PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate))*(1/Splitstate))
+# GAME OVER CONDITION
+CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
 ```
 
 ```{r setup, include=FALSE}
-run <- function(state,action,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1){
+action0 <- function(state,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0){
     j = sample(1:20000, 1)
-    a = 0
-    if (action==0){
     state[1] = state[1] + sum(ChgCarPos0[j,] * state )
     state[2] = state[2] + sum(ChgCarVel0[j,] * state )
     state[3] = state[3] + sum(ChgPolAng0[j,] * state )
     state[4] = state[4] + sum(ChgPolVel0[j,] * state )
-    a = 0
-    } else {
+    
+    return(state[1:4])
+}
+action1 <- function(state,CondtionAngle,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1){
+    j = sample(1:20000, 1)
     state[1] = state[1] + sum(ChgCarPos1[j,] * state )
     state[2] = state[2] + sum(ChgCarVel1[j,] * state )
     state[3] = state[3] + sum(ChgPolAng1[j,] * state )
     state[4] = state[4] + sum(ChgPolVel1[j,] * state )
-    a = 1
-    }
     return(state[1:4])
 }
-
-var2state <- function(CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile){
-  
+#Estimate everything has even level
+var2state <- function(level,CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile){
+  i=sum(CartPosQuantile[1:level] >= CartPos)
+  if(i==0){i=1}
+  j=sum(CartVelQuantile[1:level] >= CartVel)
+  if(j==0){j=1}
+  k=sum(PoleAngleQuantile[1:level] >= PoleAng)
+  if(k==0){k=1}
+  l=sum(PoleVelocityQuantile[1:level] >= PoleVel)
+  if(l==0){l=1}
+  return(((i-1) + level*(j-1) + level*level*(k-1) +level*level*level*(l-1))+1)
 }
 ```
+
+
+Read Bayes generated data
+```{r}
+bayesdir = "BayesMLR-V1"
+for (i in 12:15)  {
+  assign(paste0(colnames(df)[i],"0"), read.csv(paste0(bayesdir,"/",colnames(df)[i],"BayesFit0.csv"))[,-1])
+  assign(paste0(colnames(df)[i],"1"), read.csv(paste0(bayesdir,"/",colnames(df)[i],"BayesFit1.csv"))[,-1])
+}
+```
+
 
 
 ```{r}
+registerDoParallel(cores=detectCores())
+
 # TOtal state space
-n = Splitstate^4
+totalstate = Splitstate^4
+T0 = matrix(0,totalstate,totalstate)
+T1 = matrix(0,totalstate,totalstate)
 # Iteration for each state space
 iteration = 100
 # Run for loop to generate data
-Combined_score <- foreach (i2= 1:iteration,.combine = 'rbind') %:% 
-  foreach (i= 1:n,.combine = 'c') %dopar% {
-     run(state,action,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1)
-  }
+# Combined_score <- foreach (i2= 1:iteration,.combine = 'cbind') %:% 
+#   foreach (i= 1:Splitstate,.combine = 'c') %:% 
+#   foreach (j= 1:Splitstate,.combine = 'c') %:% 
+#   foreach (k= 1:Splitstate,.combine = 'c') %:% 
+#   foreach (l= 1:Splitstate,.combine = 'c') %dopar% {
+#     start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
+#     state = action0(start,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0)
+#     var2state(Splitstate,state[1],state[2],state[3],state[4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
+#      
+#   }
+info = rep(0,totalstate)
+Combined_score0 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
+  count = 0
+  for (i in 1:Splitstate){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
+  # %:% 
+  # foreach (i= 1:Splitstate,.combine = 'c') %:% 
+  # foreach (j= 1:Splitstate,.combine = 'c') %:% 
+  # foreach (k= 1:Splitstate,.combine = 'c') %:% 
+  # foreach (l= 1:Splitstate,.combine = 'c') %dopar% 
+  count = count+1
+  start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
+  state = action0(start,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0)
+  futurestate = var2state(Splitstate,state[1],state[2],state[3],state[4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
+  info[count] = futurestate
+  }}}}
+  info
+}
+
+Combined_score1 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
+  count = 0
+  for (i in 1:Splitstate){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
+  # %:% 
+  # foreach (i= 1:Splitstate,.combine = 'c') %:% 
+  # foreach (j= 1:Splitstate,.combine = 'c') %:% 
+  # foreach (k= 1:Splitstate,.combine = 'c') %:% 
+  # foreach (l= 1:Splitstate,.combine = 'c') %dopar% 
+  count = count+1
+  start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
+  state = action1(start,CondtionAngle,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1)
+  futurestate = var2state(Splitstate,state[1],state[2],state[3],state[4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
+  info[count] = futurestate
+  }}}}
+  info
+}
+
+registerDoParallel(cores=1)
+stopImplicitCluster()
 
 ```
+Turn combined_score to Transition Matrix
+```{r}
+list[ROW,COL]=dim(Combined_score0)
+for (i in 1:ROW){
+  for (j in 1:COL){
+    T0[i,Combined_score0[i,j]] =T0[i,Combined_score0[i,j]]+0.01
+    T1[i,Combined_score1[i,j]] =T1[i,Combined_score1[i,j]]+0.01
+  }
+}
+
+summary(rowSums(T0))
+
+```
+
+```{r}
+ExpectedRew = CondtionAngle/abs(PoleAngleQuantile)
+ExpectedRew = ExpectedRew[-which(ExpectedRew==Inf)]
+
+```
+
+MDP 
+```{r}
+discount = 0.95
+v = rep(0,totalstate)
+
+for (n in 1:200){
+  # v2 =pmax(ExpectedRew1 + discount*T1 %*% v, ExpectedRew2 + discount*T2 %*% v)
+  # cat(n,max(v2-v),"\n")
+  v  =pmax(T0 %*%(ExpectedRew + discount* v), T1 %*%(ExpectedRew +  discount*  v))
+}
+
+result= (T0 %*%(ExpectedRew + v))>(T1 %*%(ExpectedRew +  v))
+
+```
+
 
 
 
@@ -75,17 +181,13 @@ if (!dir.exists(dirname)){
 }
 k=paste0(dirname,"/a")
 if (TRUE){
-  write.csv(CartPosQuantile,paste0(k,"_CartPositionQuantile.csv"))
-  write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))
-  write.csv(PoleAngleQuantile,paste0(k,"_PoleAngleQuantile.csv"))
-  write.csv(PoleVelocityQuantile,paste0(k,"_PoleVelocityQuantile.csv"))
-  
-  write.csv(StateSpace,paste0(k,"_StateMap.csv"))
-  write.csv(stay,paste0(k,"_StateArr.csv"))
-  
-  write.csv(ExpectedRew1,paste0(k,"_Reward1.csv"))
-  write.csv(ExpectedRew2,paste0(k,"_Reward2.csv"))
-
+  write.csv(CartPosQuantile[-Splitstate],paste0(k,"_CartPositionQuantile.csv"))
+  write.csv(CartVelQuantile[-Splitstate],paste0(k,"_CartVelQuantile.csv"))
+  write.csv(PoleAngleQuantile[-Splitstate],paste0(k,"_PoleAngleQuantile.csv"))
+  write.csv(PoleVelocityQuantile[-Splitstate],paste0(k,"_PoleVelocityQuantile.csv"))
+  write.csv(1:totalstate,paste0(k,"_StateMap.csv"))
+  write.csv(1:totalstate,paste0(k,"_StateArr.csv"))
+  write.csv(ExpectedRew,paste0(k,"_Reward.csv"))
   write.csv(as.numeric(result),paste0(k,"_policy.csv"))
 }
 ```

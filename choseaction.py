@@ -16,13 +16,14 @@ def readinput(filename):
 
 
 #version = "Mdp10state/a"
-version = "Mdp10state/all"
+#version = "Mdp10state/all"
 #version = "Mdp20state/all"
 #version = "Mdp10state/a2"
 #version = "Mdp10state/all2"
 #version = "Mdp20stateNOPOS/a4"
 #version = "Mdp20stateNOPOS/all4"
 #version = "Mdp10stateNOPOS/all3"
+version = "Bayes10s/a"
 
 #version = "a4"
 if version!="Mdp10stateNOPOS/all3" and version!="Mdp10stateNOPOS/a3" and version!="Mdp20stateNOPOS/a4"and version!="Mdp20stateNOPOS/all4":
@@ -35,8 +36,6 @@ pole_angle = readinput( version +"_PoleAngleQuantile.csv")
 pole_velocity=readinput( version +"_PoleVelocityQuantile.csv")
 statemap = readinput( version +"_StateMap.csv")
 statearr = readinput( version +"_StateArr.csv")
-reward1 = readinput( version +"_Reward1.csv")
-reward2= readinput( version +"_Reward2.csv")
 policy= readinput( version +"_policy.csv")
 
 #print(cart_quantile )
