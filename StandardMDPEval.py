@@ -34,7 +34,7 @@ if(generate_samples):
             env.render()
             action = env.action_space.sample()
             j=0
-            for i in range(200):
+            for i in range(500):
                 if i > 0:
                     samplewriter.writerow((i-1,) + tuple(state) + (action,) + (reward,))
                 j=i

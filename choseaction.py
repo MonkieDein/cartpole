@@ -23,10 +23,12 @@ def readinput(filename):
 #version = "Mdp20stateNOPOS/a4"
 #version = "Mdp20stateNOPOS/all4"
 #version = "Mdp10stateNOPOS/all3"
-version = "Bayes10s/a"
-
+#version = "Bayes10s/a" # Even Spacing state policy
+#version = "Bayes4s/a2" # Quantile state policy
+version = "Bayes8s/a2" # Quantile state policy
+NOpos=["Mdp10stateNOPOS/all3" ,"Mdp10stateNOPOS/a3" ,"Mdp20stateNOPOS/a4","Mdp20stateNOPOS/all4" ]
 #version = "a4"
-if version!="Mdp10stateNOPOS/all3" and version!="Mdp10stateNOPOS/a3" and version!="Mdp20stateNOPOS/a4"and version!="Mdp20stateNOPOS/all4":
+if (version not in NOpos):
     cart_quantile = readinput( version +"_CartPositionQuantile.csv")
 else :
     cart_quantile = [1]
@@ -50,7 +52,7 @@ statearr = [i-1 for i in statearr]
 
 def choseaction (state):
     
-    if version!="a3" and version!="a4":
+    if (version not in NOpos):
         i=sum([(state[0]>=x) for x in cart_quantile])-1
     else :
         i=0

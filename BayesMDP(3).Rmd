@@ -5,6 +5,9 @@ date: "11/26/2019"
 output: pdf_document
 ---
 
+In this section we simulate a similar situation as the Datafenerator(2) for MDP, where we are not using a = BX formulation but instead MDP Value Iteration approach.
+
+In this program we generate more data for the CARTPOLE problem GIVEN BAYES OUTPUT AND initial input
 ```{r}
 library(gsubfn)
 library(doParallel)
@@ -20,19 +23,42 @@ df = read.csv("DATA/data.csv")[,-1]
 ```
 
 ```{r}
-summary(df)
+# summary(df)
 Splitstate = 10
-summary(df)
+# summary(df)
+
 # MAKE QUANTILE
 CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate))*(1/Splitstate))
 CartVelQuantile  = quantile(df$CartVelocity,(0:(Splitstate))*(1/Splitstate))
 PoleAngleQuantile  = quantile(df$PoleAngle,(0:(Splitstate))*(1/Splitstate))
 PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate))*(1/Splitstate))
+
+```
+
+
+```{r}
+# r = range(df$CartPos)
+# CartPosQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
+# r = range(df$CartVelocity)
+# CartVelQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
+# r = range(df$PoleAngle)
+# PoleAngleQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
+# r = range(df$PoleVelocity)
+# PoleVelocityQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
+
+```
+
+Make a condition such that it is the smallest angle that we have seen but not losing.
+```{r}
 # GAME OVER CONDITION
 CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
 ```
 
+
+
+
 ```{r setup, include=FALSE}
+
 action0 <- function(state,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0){
     j = sample(1:20000, 1)
     state[1] = state[1] + sum(ChgCarPos0[j,] * state )
@@ -100,11 +126,6 @@ info = rep(0,totalstate)
 Combined_score0 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
   count = 0
   for (i in 1:Splitstate){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
-  # %:% 
-  # foreach (i= 1:Splitstate,.combine = 'c') %:% 
-  # foreach (j= 1:Splitstate,.combine = 'c') %:% 
-  # foreach (k= 1:Splitstate,.combine = 'c') %:% 
-  # foreach (l= 1:Splitstate,.combine = 'c') %dopar% 
   count = count+1
   start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
   state = action0(start,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0)
@@ -117,11 +138,6 @@ Combined_score0 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
 Combined_score1 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
   count = 0
   for (i in 1:Splitstate){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
-  # %:% 
-  # foreach (i= 1:Splitstate,.combine = 'c') %:% 
-  # foreach (j= 1:Splitstate,.combine = 'c') %:% 
-  # foreach (k= 1:Splitstate,.combine = 'c') %:% 
-  # foreach (l= 1:Splitstate,.combine = 'c') %dopar% 
   count = count+1
   start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
   state = action1(start,CondtionAngle,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1)
@@ -150,9 +166,9 @@ summary(rowSums(T0))
 ```
 
 ```{r}
-ExpectedRew = CondtionAngle/abs(PoleAngleQuantile)
+ExpectedRew = CondtionAngle/abs(PoleAngleQuantile) 
 ExpectedRew = ExpectedRew[-which(ExpectedRew==Inf)]
-
+ExpectedRew = rep(c(t(matrix(rep(ExpectedRew,100),10,100))),10)
 ```
 
 MDP 
@@ -161,8 +177,6 @@ discount = 0.95
 v = rep(0,totalstate)
 
 for (n in 1:200){
-  # v2 =pmax(ExpectedRew1 + discount*T1 %*% v, ExpectedRew2 + discount*T2 %*% v)
-  # cat(n,max(v2-v),"\n")
   v  =pmax(T0 %*%(ExpectedRew + discount* v), T1 %*%(ExpectedRew +  discount*  v))
 }
 
@@ -172,14 +186,15 @@ result= (T0 %*%(ExpectedRew + v))>(T1 %*%(ExpectedRew +  v))
 
 
 
-
+a is used as the even spacing states.
+a2 is used as the quantile spacing states.
 
 ```{r}
 dirname = "Bayes10s"
 if (!dir.exists(dirname)){
   dir.create(dirname)
 }
-k=paste0(dirname,"/a")
+k=paste0(dirname,"/a2")
 if (TRUE){
   write.csv(CartPosQuantile[-Splitstate],paste0(k,"_CartPositionQuantile.csv"))
   write.csv(CartVelQuantile[-Splitstate],paste0(k,"_CartVelQuantile.csv"))
@@ -192,3 +207,4 @@ if (TRUE){
 }
 ```
 
+Quantile aggregation outperform even spaacing state aggregation.
