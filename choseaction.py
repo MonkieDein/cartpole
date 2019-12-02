@@ -25,8 +25,9 @@ def readinput(filename):
 #version = "Mdp10stateNOPOS/all3"
 #version = "Bayes10s/a" # Even Spacing state policy
 #version = "Bayes4s/a2" # Quantile state policy
-version = "Bayes8s/a2" # Quantile state policy
-NOpos=["Mdp10stateNOPOS/all3" ,"Mdp10stateNOPOS/a3" ,"Mdp20stateNOPOS/a4","Mdp20stateNOPOS/all4" ]
+#version = "Bayes8s/a2" # Quantile state policy
+version = "Bayes10s/a2xPOS" # Quantile state policy
+NOpos=["Mdp10stateNOPOS/all3" ,"Mdp10stateNOPOS/a3" ,"Mdp20stateNOPOS/a4","Mdp20stateNOPOS/all4","Bayes10s/a2xPOS","Bayes20s/a2xPOS" ]
 #version = "a4"
 if (version not in NOpos):
     cart_quantile = readinput( version +"_CartPositionQuantile.csv")
@@ -64,7 +65,7 @@ def choseaction (state):
         return -1
     
     
-    value = i + j*len(cart_quantile) +  k*len(cart_quantile)*len(cart_velocity)+  l*len(cart_quantile)*len(cart_velocity)*len(pole_angle)
+    value = i*len(cart_quantile)*len(cart_velocity)*len(pole_angle) + j*len(cart_quantile)*len(cart_velocity) +  k*len(cart_quantile)+  l
 #    print(statemap[value], policy[statemap[value]])
 #    print(i,j,k,l,value)
     return (policy[statemap[value]])

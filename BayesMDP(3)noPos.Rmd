@@ -24,7 +24,7 @@ df = read.csv("DATA/data.csv")[,-1]
 
 ```{r}
 # summary(df)
-Splitstate = 10
+Splitstate = 20
 # summary(df)
 
 # MAKE QUANTILE
@@ -122,7 +122,7 @@ registerDoParallel(cores=detectCores())
 totalstate = Splitstate^4
 
 # Iteration for each state space
-iteration = 100
+iteration = 10
 # Run for loop to generate data
 # Combined_score <- foreach (i2= 1:iteration,.combine = 'cbind') %:% 
 #   foreach (i= 1:Splitstate,.combine = 'c') %:% 
@@ -213,7 +213,7 @@ a is used as the even spacing states.
 a2 is used as the quantile spacing states.
 
 ```{r}
-dirname = "Bayes10s"
+dirname = paste0("Bayes",Splitstate,"s")
 if (!dir.exists(dirname)){
   dir.create(dirname)
 }

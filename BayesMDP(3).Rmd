@@ -86,8 +86,20 @@ var2state <- function(level,CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,Cart
   if(k==0){k=1}
   l=sum(PoleVelocityQuantile[1:level] >= PoleVel)
   if(l==0){l=1}
-  return(((i-1) + level*(j-1) + level*level*(k-1) +level*level*level*(l-1))+1)
+  return((level*level*level*(i-1) + level*level*(j-1) + level*(k-1) +(l-1))+1)
 }
+V2S = as.data.frame(matrix(0,Splitstate^4,5))
+colnames(V2S) = c("CartPosQuantile","CartVelQuantile","PoleAngleQuantile","PoleVelocityQuantile","State")
+index = 0
+for (i in 1:Splitstate){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
+  index = index + 1
+  V2S$CartPosQuantile[index] = i
+  V2S$CartVelQuantile[index] = j
+  V2S$PoleAngleQuantile[index] = k
+  V2S$PoleVelocityQuantile[index] = l
+  V2S$State[index] = var2state(Splitstate,CartPosQuantile[i],CartVelQuantile[j],PoleAngleQuantile[k],PoleVelocityQuantile[l],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
+}}}}
+
 ```
 
 
@@ -166,9 +178,20 @@ summary(rowSums(T0))
 ```
 
 ```{r}
-ExpectedRew = CondtionAngle/abs(PoleAngleQuantile) 
-ExpectedRew = ExpectedRew[-which(ExpectedRew==Inf)]
-ExpectedRew = rep(c(t(matrix(rep(ExpectedRew,100),10,100))),10)
+# ExpectedRew = CondtionAngle/abs(PoleAngleQuantile) -abs(CartPosQuantile) 
+# 
+# ExpectedRew = ExpectedRew[-which(ExpectedRew==Inf)]
+# ExpectedRew = rep(c(t(matrix(rep(ExpectedRew,100),10,100))),10) 
+
+
+# ExpectedRew = rep(c(t(matrix(rep(ExpectedRew,100),10,100))),10) 
+temprew  = CondtionAngle/abs(PoleAngleQuantile) -abs(CartPosQuantile) 
+temprew = temprew[-which(temprew==Inf)]
+
+ExpectedRew = rep(0,(totalstate))
+for (i in 1:Splitstate){
+  ExpectedRew[which(V2S$PoleAngleQuantile==i)] = temprew[i]
+}
 ```
 
 MDP 
