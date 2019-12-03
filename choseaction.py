@@ -26,7 +26,7 @@ def readinput(filename):
 #version = "Bayes10s/a" # Even Spacing state policy
 #version = "Bayes4s/a2" # Quantile state policy
 #version = "Bayes8s/a2" # Quantile state policy
-version = "Bayes10s/a2xPOS" # Quantile state policy
+version = "Bayes20s/a2xPOS" # Quantile state policy
 NOpos=["Mdp10stateNOPOS/all3" ,"Mdp10stateNOPOS/a3" ,"Mdp20stateNOPOS/a4","Mdp20stateNOPOS/all4","Bayes10s/a2xPOS","Bayes20s/a2xPOS" ]
 #version = "a4"
 if (version not in NOpos):

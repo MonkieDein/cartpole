@@ -24,7 +24,7 @@ df = read.csv("DATA/data.csv")[,-1]
 
 ```{r}
 # summary(df)
-Splitstate = 20
+Splitstate = 10
 # summary(df)
 
 # MAKE QUANTILE
@@ -122,7 +122,7 @@ registerDoParallel(cores=detectCores())
 totalstate = Splitstate^4
 
 # Iteration for each state space
-iteration = 10
+iteration = 100
 # Run for loop to generate data
 # Combined_score <- foreach (i2= 1:iteration,.combine = 'cbind') %:% 
 #   foreach (i= 1:Splitstate,.combine = 'c') %:% 
@@ -227,6 +227,8 @@ if (TRUE){
   write.csv(1:(totalstate/Splitstate),paste0(k,"_StateArr.csv"))
   write.csv(ExpectedRew,paste0(k,"_Reward.csv"))
   write.csv(as.numeric(result),paste0(k,"_policy.csv"))
+  write.csv(T0,paste0(k,"_Transition0.csv"))
+  write.csv(T1,paste0(k,"_Transition1.csv"))
 }
 ```
 
