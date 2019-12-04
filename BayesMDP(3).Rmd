@@ -78,13 +78,13 @@ action1 <- function(state,CondtionAngle,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolV
 }
 #Estimate everything has even level
 var2state <- function(level,CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile){
-  i=sum(CartPosQuantile[1:level] >= CartPos)
+  i=sum(CartPosQuantile[1:level] <= CartPos)
   if(i==0){i=1}
-  j=sum(CartVelQuantile[1:level] >= CartVel)
+  j=sum(CartVelQuantile[1:level] <= CartVel)
   if(j==0){j=1}
-  k=sum(PoleAngleQuantile[1:level] >= PoleAng)
+  k=sum(PoleAngleQuantile[1:level] <= PoleAng)
   if(k==0){k=1}
-  l=sum(PoleVelocityQuantile[1:level] >= PoleVel)
+  l=sum(PoleVelocityQuantile[1:level] <= PoleVel)
   if(l==0){l=1}
   return((level*level*level*(i-1) + level*level*(j-1) + level*(k-1) +(l-1))+1)
 }

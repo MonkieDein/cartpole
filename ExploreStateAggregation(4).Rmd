@@ -56,14 +56,15 @@ assign("EstimatedAngle", as.matrix(read.csv(paste0(bayesdir,"/BayesPOMDPangle.cs
 
 Create the relationship between the Observation and the States
 ```{r}
-registerDoParallel(cores=detectCores())
 
 n_set = 1000
 n_var = dim(EstimatedAngle)[2]
-angle_i_state = matrix(0,Splitstate,)
+angle_i_state = matrix(0,Splitstate,Splitstate^(n_var-1))
 for (i in 1:Splitstate){
-  angle_i = runif(n_set,PoleAngleQuantile[i],PoleAngleQuantile[i+1])
-  angle_mat = matrix(c(rep(angle_i,(n_var-1)),rep(1,n_set)),n_set,n_var) # 1000 by 4
+  cartvel_i = runif(n_set,CartVelQuantile[i],CartVelQuantile[i+1])
+  cartpos_i = runif(n_set,CartPositionQuantile[i],CartPositionQuantile[i+1])
+  polevel_i = runif(n_set,PoleVelocityQuantile[i],PoleVelocityQuantile[i+1])
+  angle_mat = matrix(c(cartpos_i,cartvel_i,polevel_i,rep(1,n_set)),n_set,n_var) # 1000 by 4
   angle_i_dist = c(EstimatedAngle %*% t(angle_mat))
   angle_i_state 
   <- foreach (i2= 1:Splitstate,.combine = 'c') %do% {
@@ -71,8 +72,6 @@ for (i in 1:Splitstate){
   }
 }
 
-registerDoParallel(cores=1)
-stopImplicitCluster()
 ```
 
 
