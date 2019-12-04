@@ -16,47 +16,68 @@ rm(list = ls())
 # setwd("~/Desktop/AML/cartpole")
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
 df = read.csv("DATA/data.csv")[,-1]
-
-# df = read.csv("cartpole50.csv")
-# source("csvfunction.R")
-# df = CreateSym(df)
 ```
 
+Load all the data that we already have made and just do POMDP now on.
 ```{r}
-# summary(df)
-Splitstate = 20
-# summary(df)
+Splitstate = 10
+dirname = paste0("Bayes",Splitstate,"s")
+if (dir.exists(dirname)){
+  
+k=paste0(dirname,"/a2xPOS")
 
-# MAKE QUANTILE
-CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate))*(1/Splitstate))
-CartVelQuantile  = quantile(df$CartVelocity,(0:(Splitstate))*(1/Splitstate))
-PoleAngleQuantile  = quantile(df$PoleAngle,(0:(Splitstate))*(1/Splitstate))
-PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate))*(1/Splitstate))
+assign("CartPositionQuantile",read.csv(paste0(k,"_CartPositionQuantile.csv"), stringsAsFactors=FALSE))
+rowname = CartPositionQuantile[,1]
+rownames(CartPositionQuantile) <-rowname
+CartPositionQuantile = CartPositionQuantile[, -1]
+assign("CartVelQuantile",read.csv(paste0(k,"_CartVelQuantile.csv"),row.names = rowname)[,-1])
+assign("PoleAngleQuantile",read.csv(paste0(k,"_PoleAngleQuantile.csv"),row.names = rowname)[,-1])
+assign("PoleVelocityQuantile",read.csv(paste0(k,"_PoleVelocityQuantile.csv"),row.names = rowname)[,-1])
+assign("ExpectedRew",read.csv(paste0(k,"_Reward.csv"))[,-1])
+assign("policy",read.csv(paste0(k,"_policy.csv"))[,-1])
+assign("T0",as.matrix(read.csv(paste0(k,"_Transition0.csv"))[,-1]))
+assign("T1",as.matrix(read.csv(paste0(k,"_Transition1.csv"))[,-1]))
 
+} else {
+  cat(paste0("ERROR ::: DIRECTORY ---",dirname,"--- DOES NOT EXIST !!!\n"))
+}
 ```
 
 
+Read Bayes generated data
 ```{r}
-# r = range(df$CartPos)
-# CartPosQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
-# r = range(df$CartVelocity)
-# CartVelQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
-# r = range(df$PoleAngle)
-# PoleAngleQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
-# r = range(df$PoleVelocity)
-# PoleVelocityQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
-
+bayesdir = "BayesMLR-V1"
+for (i in 12:15)  {
+  assign(paste0(colnames(df)[i],"0"), read.csv(paste0(bayesdir,"/",colnames(df)[i],"BayesFit0.csv"))[,-1])
+  assign(paste0(colnames(df)[i],"1"), read.csv(paste0(bayesdir,"/",colnames(df)[i],"BayesFit1.csv"))[,-1])
+}
+assign("EstimatedAngle", as.matrix(read.csv(paste0(bayesdir,"/BayesPOMDPangle.csv"))[,-1]))# 20000 by 4
 ```
 
-Make a condition such that it is the smallest angle that we have seen but not losing.
+Create the relationship between the Observation and the States
 ```{r}
-# GAME OVER CONDITION
-CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
+registerDoParallel(cores=detectCores())
+
+n_set = 1000
+n_var = dim(EstimatedAngle)[2]
+angle_i_state = matrix(0,Splitstate,)
+for (i in 1:Splitstate){
+  angle_i = runif(n_set,PoleAngleQuantile[i],PoleAngleQuantile[i+1])
+  angle_mat = matrix(c(rep(angle_i,(n_var-1)),rep(1,n_set)),n_set,n_var) # 1000 by 4
+  angle_i_dist = c(EstimatedAngle %*% t(angle_mat))
+  angle_i_state 
+  <- foreach (i2= 1:Splitstate,.combine = 'c') %do% {
+    sum()
+  }
+}
+
+registerDoParallel(cores=1)
+stopImplicitCluster()
 ```
 
 
 
-
+MAP variable to States and also Transition function for each actions.
 ```{r setup, include=FALSE}
 
 action0 <- function(state,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0){
@@ -104,88 +125,10 @@ for (i in 1:1){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Split
 ```
 
 
-Read Bayes generated data
-```{r}
-bayesdir = "BayesMLR-V1"
-for (i in 12:15)  {
-  assign(paste0(colnames(df)[i],"0"), read.csv(paste0(bayesdir,"/",colnames(df)[i],"BayesFit0.csv"))[,-1])
-  assign(paste0(colnames(df)[i],"1"), read.csv(paste0(bayesdir,"/",colnames(df)[i],"BayesFit1.csv"))[,-1])
-}
-```
-
 
 
 ```{r}
-registerDoParallel(cores=detectCores())
-
-# TOtal state space
-totalstate = Splitstate^4
-
-# Iteration for each state space
-iteration = 100
-# Run for loop to generate data
-# Combined_score <- foreach (i2= 1:iteration,.combine = 'cbind') %:% 
-#   foreach (i= 1:Splitstate,.combine = 'c') %:% 
-#   foreach (j= 1:Splitstate,.combine = 'c') %:% 
-#   foreach (k= 1:Splitstate,.combine = 'c') %:% 
-#   foreach (l= 1:Splitstate,.combine = 'c') %dopar% {
-#     start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
-#     state = action0(start,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0)
-#     var2state(Splitstate,state[1],state[2],state[3],state[4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)summary(rowSums(T0))
-#      
-#   }
-FixPosition = min(CartPosQuantile)
-
-info = rep(0,(totalstate/Splitstate))
-Combined_score0 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
-  count = 0
-  for (i in 1:1){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
-  count = count+1
-  start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
-  state = action0(start,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0)
-  futurestate = var2state(Splitstate,FixPosition,state[2],state[3],state[4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
-  info[count] = futurestate
-  }}}}
-  info
-}
-
-Combined_score1 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
-  count = 0
-  for (i in 1:1){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
-  count = count+1
-  start = c(runif(1,CartPosQuantile[i],CartPosQuantile[i+1]), runif(1,CartVelQuantile[j],CartVelQuantile[j+1]) ,runif(1,PoleAngleQuantile[k],PoleAngleQuantile[k+1]) , runif(1,PoleVelocityQuantile[l],PoleVelocityQuantile[l+1]),1 )
-  state = action1(start,CondtionAngle,ChgCarPos1,ChgCarVel1,ChgPolAng1,ChgPolVel1)
-  futurestate = var2state(Splitstate,FixPosition,state[2],state[3],state[4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
-  info[count] = futurestate
-  }}}}
-  info
-}
-
-registerDoParallel(cores=1)
-stopImplicitCluster()
-
-```
-Turn combined_score to Transition Matrix
-```{r}
-T0 = matrix(0,(totalstate/Splitstate),(totalstate/Splitstate))
-
-T1 = matrix(0,(totalstate/Splitstate),(totalstate/Splitstate))
-
-list[ROW,COL]=dim(Combined_score0)
-for (i in 1:ROW){
-  for (j in 1:COL){
-    T0[i,Combined_score0[i,j]] =T0[i,Combined_score0[i,j]]+0.01
-    T1[i,Combined_score1[i,j]] =T1[i,Combined_score1[i,j]]+0.01
-  }
-}
-# T0  = T0 / rowSums(T0)[1]
-summary(rowSums(T0))
-# which(rowSums(T0) > 0)
-# which(colSums(T0) > 0)
-```
-
-```{r}
-temprew  = CondtionAngle/abs(PoleAngleQuantile) -abs(CartPosQuantile) 
+temprew  = CondtionAngle/abs(PoleAngleQuantile) #-abs(CartPosQuantile) 
 temprew = temprew[-which(temprew==Inf)]
 
 ExpectedRew = rep(0,(totalstate/Splitstate))
@@ -207,27 +150,5 @@ result= (T0 %*%(ExpectedRew + v))>(T1 %*%(ExpectedRew +  v))
 
 ```
 
-
-
-a is used as the even spacing states.
-a2 is used as the quantile spacing states.
-
-```{r}
-dirname = paste0("Bayes",Splitstate,"s")
-if (!dir.exists(dirname)){
-  dir.create(dirname)
-}
-k=paste0(dirname,"/a2xPOS")
-if (TRUE){
-  write.csv(CartPosQuantile[-Splitstate],paste0(k,"_CartPositionQuantile.csv"))
-  write.csv(CartVelQuantile[-Splitstate],paste0(k,"_CartVelQuantile.csv"))
-  write.csv(PoleAngleQuantile[-Splitstate],paste0(k,"_PoleAngleQuantile.csv"))
-  write.csv(PoleVelocityQuantile[-Splitstate],paste0(k,"_PoleVelocityQuantile.csv"))
-  write.csv(1:(totalstate/Splitstate),paste0(k,"_StateMap.csv"))
-  write.csv(1:(totalstate/Splitstate),paste0(k,"_StateArr.csv"))
-  write.csv(ExpectedRew,paste0(k,"_Reward.csv"))
-  write.csv(as.numeric(result),paste0(k,"_policy.csv"))
-}
-```
 
 Quantile aggregation outperform even spaacing state aggregation.

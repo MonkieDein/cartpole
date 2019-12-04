@@ -24,7 +24,7 @@ df = read.csv("DATA/data.csv")[,-1]
 
 ```{r}
 # summary(df)
-Splitstate = 10
+Splitstate = 20
 # summary(df)
 
 # MAKE QUANTILE
@@ -185,7 +185,7 @@ summary(rowSums(T0))
 ```
 
 ```{r}
-temprew  = CondtionAngle/abs(PoleAngleQuantile) -abs(CartPosQuantile) 
+temprew  = CondtionAngle/abs(PoleAngleQuantile) #-abs(CartPosQuantile) 
 temprew = temprew[-which(temprew==Inf)]
 
 ExpectedRew = rep(0,(totalstate/Splitstate))
@@ -227,8 +227,8 @@ if (TRUE){
   write.csv(1:(totalstate/Splitstate),paste0(k,"_StateArr.csv"))
   write.csv(ExpectedRew,paste0(k,"_Reward.csv"))
   write.csv(as.numeric(result),paste0(k,"_policy.csv"))
-  write.csv(T0,paste0(k,"_Transition0.csv"))
-  write.csv(T1,paste0(k,"_Transition1.csv"))
+  # write.csv(T0,paste0(k,"_Transition0.csv"))
+  # write.csv(T1,paste0(k,"_Transition1.csv"))
 }
 ```
 

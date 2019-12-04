@@ -1,0 +1,78 @@
+---
+title: "Init Distribution"
+author: "Monkie"
+date: "11/24/2019"
+output: pdf_document
+---
+
+In this program we generate more data for the CARTPOLE problem GIVEN BAYES OUTPUT AND initial input
+```{r setup, include=FALSE}
+list.of.packages <- c("splines", "devtools", "shinystan", "rstan", "lmerTest","gdata","foreach","rlist","doParallel")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(splines)
+library(devtools)
+library(shinystan)
+library(rstan)
+library(lmerTest)
+library(gdata)
+library(rlist)
+library(foreach) # For parallel programming purposes
+library(doParallel)
+rm(list = ls())
+setwd("~/Desktop/GITHUB/cartpole/cartpole")
+# realdf = read.csv("cartpole.csv")
+df = read.csv("DATA/data.csv")[,-1]
+```
+
+```{r}
+cn = c("Step" ,"CartPos", "CartVelocity" ,"PoleAngle", "PoleVelocity" ,"Action", "Reward","FutCarPos","FutCarVel", "FutPolAng" ,"FutPolVel","ChgCarPos","ChgCarVel","ChgPolAng","ChgPolVel" )
+# SET CONSTANT
+n=1000000
+POS = 2
+CVEL = 3
+ANG = 4
+PVEL = 5
+# MAKE HISTOGRAM TO OBSERVE DISTRIBUTION
+for (i in 2:5){
+  hist(df[which(df$Step==0 & df[,i]>0),i],main=paste("Initial",colnames(df)[i]),nclass=30)
+}
+# Observe data distribution
+pairs(df[which(df$Step==0),2:5])
+
+# Create intial state distribution
+bool = matrix(sample(c(1,-1),n*3,replace = TRUE),n,3)
+bool = cbind(bool,-bool[,2])
+init ={}
+for (i in 2:5){
+  init = cbind(init,runif(n, min = min(df[which(df$Step==0 & df[,i]>0),i]), max = max(df[which(df$Step==0 & df[,i]>0),i])))
+}
+init = init * bool
+colnames(init) = colnames(df)[2:5]
+#COMPARE GENERATED INITIAL DISTRIBUTION AND INITIAL DISTRIBUTION
+Splitstate = 10
+# MAKE QUANTILE
+CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate))*(1/Splitstate))
+CartVelQuantile  = quantile(df$CartVelocity,(0:(Splitstate))*(1/Splitstate))
+PoleAngleQuantile  = quantile(df$PoleAngle,(0:(Splitstate))*(1/Splitstate))
+PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate))*(1/Splitstate))
+
+#Estimate everything has even level
+var2state <- function(level,CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile){
+  i=sum(CartPosQuantile[1:level] <= CartPos)
+  if(i==0){i=1}
+  j=sum(CartVelQuantile[1:level] <= CartVel)
+  if(j==0){j=1}
+  k=sum(PoleAngleQuantile[1:level] <= PoleAng)
+  if(k==0){k=1}
+  l=sum(PoleVelocityQuantile[1:level] <= PoleVel)
+  if(l==0){l=1}
+  return((level*level*level*(i-1) + level*level*(j-1) + level*(k-1) +(l-1))+1)
+}
+FixPosition = min(CartPosQuantile)
+init_state <- rep(0,n)
+for(i2 in 1:n)  {
+  init_state[i2] = var2state(Splitstate,FixPosition,init[i2,2],init[i2,3],init[i2,4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
+}
+```

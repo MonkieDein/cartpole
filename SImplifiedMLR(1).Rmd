@@ -97,7 +97,7 @@ GENERATE DATA Implement Bayesian Simulation (Begin)
 gen_data = FALSE
 
 if (gen_data){
-dirname = "BAYESMLR-V1"
+dirname = "BayesMLR-V1"
 if (!dir.exists(dirname)){
   dir.create(dirname)
 }
@@ -243,13 +243,13 @@ write.csv(PoleAngleFit$coefficients,paste0(dirname,"/","POMDPpoleangle.csv"))
 ```
 
 
-
+GENERATE APPROXIMATE OF THE BAYES FOR POMDP
 
 ```{r}
-gen_data = FALSE
+gen_data = TRUE
 
 if (gen_data){
-dirname = "BAYESMLR-V1"
+dirname = "BayesMLR-V1"
 if (!dir.exists(dirname)){
   dir.create(dirname)
 }
@@ -294,35 +294,35 @@ generated quantities {
 # -------------------------------
 # SEPARATE THE FIT Y MULTIPLE TIME FOR EACH VARIABLES. # DONT NEED FOR LOOP, NEED TO CHANGE X AND Y THO.
 
-X = df1[,2:5]
+X = df[,c(2,3,5)]
 X = cbind(X,1)
 # for (i in 12:15){
-foreach (i=12:15) %do% {
-  Y = df1[,i]   # 12
-  # Include intercept
-  num_data <- length(Y)
-  num_feat <- ncol(X)
-  # Fit Linear regression
-  lin_reg = stan(model_code=stan_model,
-                 model_name="MLR on cartpole",
-                 data=list(n = num_data, 
-                           m = num_feat, 
-                           features = X, 
-                           y  = Y), 
-                 iter=10000, chains=4, 
-                 warmup=5000)
-  
-  # extract posterior samples for each parameter
-  # Recreate data
-  fit1_samples = rstan::extract(lin_reg)
-  # str(fit1_samples)
-  A_sample = fit1_samples[[1]]
-  colnames(A_sample) = c("CartPos" ,"CartVelocity"  ,"PoleAngle" ,"PoleVelocity" ,"CONSTANT")
-  # Write CSV in R
-  write.csv(A_sample, file = paste0(dirname,"/",colnames(df1)[i],"BayesFit1.csv")) # 12
-  Error = fit1_samples[[2]]
-  write.csv(Error, file = paste0(dirname,"/",colnames(df1)[i],"Bayes_err_Action1.csv"))
-}
+
+Y = df[,4]   # 12
+# Include intercept
+num_data <- length(Y)
+num_feat <- ncol(X)
+# Fit Linear regression
+lin_reg = stan(model_code=stan_model,
+               model_name="MLR on cartpole",
+               data=list(n = num_data, 
+                         m = num_feat, 
+                         features = X, 
+                         y  = Y), 
+               iter=10000, chains=4, 
+               warmup=5000)
+
+# extract posterior samples for each parameter
+# Recreate data
+fit1_samples = rstan::extract(lin_reg)
+# str(fit1_samples)
+A_sample = fit1_samples[[1]]
+colnames(A_sample) = c("CartPos" ,"CartVelocity","PoleVelocity" ,"CONSTANT")
+# Write CSV in R
+write.csv(A_sample, file = paste0(dirname,"/BayesPOMDPangle.csv")) # 12
+Error = fit1_samples[[2]]
+write.csv(Error, file = paste0(dirname,"/BayesPOMDP_err_angle.csv"))
+
 
 
 }
