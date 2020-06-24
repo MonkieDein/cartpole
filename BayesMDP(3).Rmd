@@ -16,7 +16,6 @@ rm(list = ls())
 # setwd("~/Desktop/AML/cartpole")
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
 df = read.csv("DATA/data.csv")[,-1]
-
 # df = read.csv("cartpole50.csv")
 # source("csvfunction.R")
 # df = CreateSym(df)
@@ -24,18 +23,16 @@ df = read.csv("DATA/data.csv")[,-1]
 
 ```{r}
 # summary(df)
-Splitstate = 10
+Splitstate = 8
 # summary(df)
-
 # MAKE QUANTILE
 CartPosQuantile  = quantile(df$CartPos,(0:(Splitstate))*(1/Splitstate))
 CartVelQuantile  = quantile(df$CartVelocity,(0:(Splitstate))*(1/Splitstate))
 PoleAngleQuantile  = quantile(df$PoleAngle,(0:(Splitstate))*(1/Splitstate))
 PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate))*(1/Splitstate))
-
 ```
 
-
+Evenly spacing
 ```{r}
 # r = range(df$CartPos)
 # CartPosQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
@@ -45,7 +42,6 @@ PoleVelocityQuantile  = quantile(df$PoleVelocity,(0:(Splitstate))*(1/Splitstate)
 # PoleAngleQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
 # r = range(df$PoleVelocity)
 # PoleVelocityQuantile  = (0:(Splitstate))*(1/Splitstate)*(r[2]-r[1])+r[1]
-
 ```
 
 Make a condition such that it is the smallest angle that we have seen but not losing.
@@ -54,11 +50,7 @@ Make a condition such that it is the smallest angle that we have seen but not lo
 CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
 ```
 
-
-
-
 ```{r setup, include=FALSE}
-
 action0 <- function(state,CondtionAngle,ChgCarPos0,ChgCarVel0,ChgPolAng0,ChgPolVel0){
     j = sample(1:20000, 1)
     state[1] = state[1] + sum(ChgCarPos0[j,] * state )
@@ -86,19 +78,8 @@ var2state <- function(level,CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,Cart
   if(k==0){k=1}
   l=sum(PoleVelocityQuantile[1:level] <= PoleVel)
   if(l==0){l=1}
-  return((level*level*level*(i-1) + level*level*(j-1) + level*(k-1) +(l-1))+1)
+  return(((i-1) + level*(j-1) + level*level*(k-1) +level*level*level*(l-1))+1)
 }
-V2S = as.data.frame(matrix(0,Splitstate^4,5))
-colnames(V2S) = c("CartPosQuantile","CartVelQuantile","PoleAngleQuantile","PoleVelocityQuantile","State")
-index = 0
-for (i in 1:Splitstate){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
-  index = index + 1
-  V2S$CartPosQuantile[index] = i
-  V2S$CartVelQuantile[index] = j
-  V2S$PoleAngleQuantile[index] = k
-  V2S$PoleVelocityQuantile[index] = l
-  V2S$State[index] = var2state(Splitstate,CartPosQuantile[i],CartVelQuantile[j],PoleAngleQuantile[k],PoleVelocityQuantile[l],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
-}}}}
 
 ```
 
@@ -116,7 +97,6 @@ for (i in 12:15)  {
 
 ```{r}
 registerDoParallel(cores=detectCores())
-
 # TOtal state space
 totalstate = Splitstate^4
 T0 = matrix(0,totalstate,totalstate)
@@ -146,7 +126,6 @@ Combined_score0 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
   }}}}
   info
 }
-
 Combined_score1 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
   count = 0
   for (i in 1:Splitstate){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
@@ -158,13 +137,13 @@ Combined_score1 <- foreach (i2= 1:iteration,.combine = 'cbind') %dopar% {
   }}}}
   info
 }
-
 registerDoParallel(cores=1)
 stopImplicitCluster()
-
 ```
 Turn combined_score to Transition Matrix
 ```{r}
+T0 = matrix(0,totalstate,totalstate)
+T1 = matrix(0,totalstate,totalstate)
 list[ROW,COL]=dim(Combined_score0)
 for (i in 1:ROW){
   for (j in 1:COL){
@@ -172,39 +151,24 @@ for (i in 1:ROW){
     T1[i,Combined_score1[i,j]] =T1[i,Combined_score1[i,j]]+0.01
   }
 }
-
 summary(rowSums(T0))
 
 ```
 
 ```{r}
-# ExpectedRew = CondtionAngle/abs(PoleAngleQuantile) -abs(CartPosQuantile) 
-# 
-# ExpectedRew = ExpectedRew[-which(ExpectedRew==Inf)]
-# ExpectedRew = rep(c(t(matrix(rep(ExpectedRew,100),10,100))),10) 
-
-
-# ExpectedRew = rep(c(t(matrix(rep(ExpectedRew,100),10,100))),10) 
-temprew  = CondtionAngle/abs(PoleAngleQuantile) -abs(CartPosQuantile) 
-temprew = temprew[-which(temprew==Inf)]
-
-ExpectedRew = rep(0,(totalstate))
-for (i in 1:Splitstate){
-  ExpectedRew[which(V2S$PoleAngleQuantile==i)] = temprew[i]
-}
+ExpectedRew = CondtionAngle/abs(PoleAngleQuantile) 
+ExpectedRew = ExpectedRew[-which(ExpectedRew==Inf)]
+ExpectedRew = rep(c(t(matrix(rep(ExpectedRew,Splitstate^2),Splitstate,Splitstate^2))),Splitstate)
 ```
 
 MDP 
 ```{r}
 discount = 0.95
 v = rep(0,totalstate)
-
 for (n in 1:200){
   v  =pmax(T0 %*%(ExpectedRew + discount* v), T1 %*%(ExpectedRew +  discount*  v))
 }
-
 result= (T0 %*%(ExpectedRew + v))>(T1 %*%(ExpectedRew +  v))
-
 ```
 
 
@@ -213,16 +177,16 @@ a is used as the even spacing states.
 a2 is used as the quantile spacing states.
 
 ```{r}
-dirname = "Bayes10s"
+dirname = paste0("Bayes",Splitstate,"s")
 if (!dir.exists(dirname)){
   dir.create(dirname)
 }
 k=paste0(dirname,"/a2")
 if (TRUE){
-  write.csv(CartPosQuantile[-Splitstate],paste0(k,"_CartPositionQuantile.csv"))
-  write.csv(CartVelQuantile[-Splitstate],paste0(k,"_CartVelQuantile.csv"))
-  write.csv(PoleAngleQuantile[-Splitstate],paste0(k,"_PoleAngleQuantile.csv"))
-  write.csv(PoleVelocityQuantile[-Splitstate],paste0(k,"_PoleVelocityQuantile.csv"))
+  write.csv(CartPosQuantile,paste0(k,"_CartPositionQuantile.csv"))
+  write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))
+  write.csv(PoleAngleQuantile,paste0(k,"_PoleAngleQuantile.csv"))
+  write.csv(PoleVelocityQuantile,paste0(k,"_PoleVelocityQuantile.csv"))
   write.csv(1:totalstate,paste0(k,"_StateMap.csv"))
   write.csv(1:totalstate,paste0(k,"_StateArr.csv"))
   write.csv(ExpectedRew,paste0(k,"_Reward.csv"))

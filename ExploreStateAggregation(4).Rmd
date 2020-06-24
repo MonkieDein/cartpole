@@ -9,9 +9,13 @@ In this section we simulate a similar situation as the Datafenerator(2) for MDP,
 
 In this program we generate more data for the CARTPOLE problem GIVEN BAYES OUTPUT AND initial input
 ```{r}
+list.of.packages <- c("gsubfn", "doParallel", "foreach", "pomdp")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
 library(gsubfn)
 library(doParallel)
 library(foreach)
+library(pomdp)
 rm(list = ls())
 # setwd("~/Desktop/AML/cartpole")
 setwd("~/Desktop/GITHUB/cartpole/cartpole")
@@ -26,10 +30,10 @@ if (dir.exists(dirname)){
   
 k=paste0(dirname,"/a2xPOS")
 
-assign("CartPositionQuantile",read.csv(paste0(k,"_CartPositionQuantile.csv"), stringsAsFactors=FALSE))
-rowname = CartPositionQuantile[,1]
-rownames(CartPositionQuantile) <-rowname
-CartPositionQuantile = CartPositionQuantile[, -1]
+assign("CartPosQuantile",read.csv(paste0(k,"_CartPositionQuantile.csv"), stringsAsFactors=FALSE))
+rowname = CartPosQuantile[,1]
+rownames(CartPosQuantile) <-rowname
+CartPosQuantile = CartPosQuantile[, -1]
 assign("CartVelQuantile",read.csv(paste0(k,"_CartVelQuantile.csv"),row.names = rowname)[,-1])
 assign("PoleAngleQuantile",read.csv(paste0(k,"_PoleAngleQuantile.csv"),row.names = rowname)[,-1])
 assign("PoleVelocityQuantile",read.csv(paste0(k,"_PoleVelocityQuantile.csv"),row.names = rowname)[,-1])
@@ -37,7 +41,9 @@ assign("ExpectedRew",read.csv(paste0(k,"_Reward.csv"))[,-1])
 assign("policy",read.csv(paste0(k,"_policy.csv"))[,-1])
 assign("T0",as.matrix(read.csv(paste0(k,"_Transition0.csv"))[,-1]))
 assign("T1",as.matrix(read.csv(paste0(k,"_Transition1.csv"))[,-1]))
-
+init_freq =read.csv("DATA/init_dist.csv")[,2]
+Transition0 = read.csv(paste0(k,"_Transition0.csv"))[,-1]
+Transition1 = read.csv(paste0(k,"_Transition1.csv"))[,-1]
 } else {
   cat(paste0("ERROR ::: DIRECTORY ---",dirname,"--- DOES NOT EXIST !!!\n"))
 }
@@ -53,27 +59,6 @@ for (i in 12:15)  {
 }
 assign("EstimatedAngle", as.matrix(read.csv(paste0(bayesdir,"/BayesPOMDPangle.csv"))[,-1]))# 20000 by 4
 ```
-
-Create the relationship between the Observation and the States
-```{r}
-
-n_set = 1000
-n_var = dim(EstimatedAngle)[2]
-angle_i_state = matrix(0,Splitstate,Splitstate^(n_var-1))
-for (i in 1:Splitstate){
-  cartvel_i = runif(n_set,CartVelQuantile[i],CartVelQuantile[i+1])
-  cartpos_i = runif(n_set,CartPositionQuantile[i],CartPositionQuantile[i+1])
-  polevel_i = runif(n_set,PoleVelocityQuantile[i],PoleVelocityQuantile[i+1])
-  angle_mat = matrix(c(cartpos_i,cartvel_i,polevel_i,rep(1,n_set)),n_set,n_var) # 1000 by 4
-  angle_i_dist = c(EstimatedAngle %*% t(angle_mat))
-  angle_i_state 
-  <- foreach (i2= 1:Splitstate,.combine = 'c') %do% {
-    sum()
-  }
-}
-
-```
-
 
 
 MAP variable to States and also Transition function for each actions.
@@ -109,7 +94,9 @@ var2state <- function(level,CartPos,CartVel,PoleAng,PoleVel,CartPosQuantile,Cart
   return((level*level*level*(i-1) + level*level*(j-1) + level*(k-1) +(l-1))+1)
 }
 
-V2S = as.data.frame(matrix(0,Splitstate^3,5))
+n2v <- function (i,j,k,l,level){return((level*level*level*(i-1) + level*level*(j-1) + level*(k-1) +(l-1))+1)}
+
+V2S = as.data.frame(matrix(0,Splitstate^4,5))
 colnames(V2S) = c("CartPosQuantile","CartVelQuantile","PoleAngleQuantile","PoleVelocityQuantile","State")
 index = 0
 for (i in 1:1){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Splitstate){
@@ -124,30 +111,104 @@ for (i in 1:1){for (j in 1:Splitstate){for (k in 1:Splitstate){for (l in 1:Split
 ```
 
 
-
-
+Create the relationship between the Observation and the States
 ```{r}
-temprew  = CondtionAngle/abs(PoleAngleQuantile) #-abs(CartPosQuantile) 
-temprew = temprew[-which(temprew==Inf)]
 
+n_set = 50
+n_var = dim(EstimatedAngle)[2]
+obs2state = matrix(0,Splitstate^(n_var-1),Splitstate)
+positionO2S = matrix(0,Splitstate^(n_var-1),4)
+colnames(positionO2S) = c("index","CartPosQuant","CartVelQuant","PoleVelQuant")
+count = 0
+for (i in 1:1){for (j in 1:Splitstate){for (k in 1:Splitstate){
+  count = count+1
+  cartvel_j = runif(n_set,CartVelQuantile[j],CartVelQuantile[j+1])
+  polevel_k = runif(n_set,PoleVelocityQuantile[k],PoleVelocityQuantile[k+1])
+  angle_mat = matrix(c(cartvel_j,polevel_k,rep(1,n_set)),n_set,n_var) # n_set by 3
+  angles = c(EstimatedAngle %*% t(angle_mat))# ESTIMATED  = 20000 by 3 # 20000 by 50 is solution
+  # Count quantile
+  for (quant in 1:Splitstate){
+      obs2state[count,quant] = sum((angles>=PoleAngleQuantile[quant] & angles<PoleAngleQuantile[quant+1]))
+  }
+  # Everythint that smaller than 1st quantile consider as 1st quantile
+  obs2state[count,1] = obs2state[count,1] + sum(angles<PoleAngleQuantile[1])
+  # Everythint that bigger than 10th quantile consider as 10th quantile
+  obs2state[count,Splitstate] = obs2state[count,Splitstate] + sum(angles>PoleAngleQuantile[Splitstate+1])
+  positionO2S[count,] = c(count,i,j,k)
+}}}
+
+obs2state = obs2state / n_set / 20000
+D = dim(obs2state)
+ObsTransitionState = matrix(0,Splitstate^(n_var-1),Splitstate^(n_var))
+for (ROW in 1:D[1]){
+  for (COL in 1:D[2]){
+    ObsTransitionState[ROW,n2v(positionO2S[ROW,2],positionO2S[ROW,3],COL,positionO2S[ROW,4],Splitstate)] = obs2state[ROW,COL]
+  }
+}
+
+CondtionAngle = min(df$PoleAngle[which(df$Reward!=1&df$PoleAngle>0)])*0.96
+
+temprew  = CondtionAngle/abs(PoleAngleQuantile)
+temprew = temprew[-which(temprew==Inf)]
+totalstate = Splitstate ^3
 ExpectedRew = rep(0,(totalstate/Splitstate))
 for (i in 1:Splitstate){
 ExpectedRew[which(V2S$PoleAngleQuantile==i)] = temprew[i]
 }
+
 ```
 
-MDP 
 ```{r}
-discount = 0.95
-v = rep(0,(totalstate/Splitstate))
 
-for (n in 1:100){
-  v  =pmax(T0 %*%(ExpectedRew + discount* v), T1 %*%(ExpectedRew +  discount*  v))
-}
+anything = rep("*",(Splitstate^3))
+mystates = as.character(1:(Splitstate^3))
+rewarddf =data.frame(
+    "action" = anything,"start-state"=anything,"end-state"=mystates,
+    "observation" = anything,"reward" = ExpectedRew)
+cartpole <- POMDP(
+  name = "cartpole",
+  discount = 0.95,
+  states = mystates,
+  actions = as.character(0:1),
+  observations = as.character(1:count),
+  start = init_freq,
+  transition_prob = list("0" = Transition0 , "1" = Transition1),
+  observation_prob = list("0" = t(ObsTransitionState),"1" = t(ObsTransitionState)),
+  reward = rewarddf
+)
+cartpole
+cartpole_solved <- solve_POMDP(cartpole)
+```
 
-result= (T0 %*%(ExpectedRew + v))>(T1 %*%(ExpectedRew +  v))
-
+```{r}
+library("pomdp")
+TigerProblem <- POMDP(
+name = "Tiger Problem",
+discount = 0.75,
+states = c("tiger-left" , "tiger-right"),
+actions = c("listen", "open-left", "open-right"),
+observations = c("tiger-left", "tiger-right"),
+start = "uniform",
+transition_prob = list(
+"listen" = "identity",
+"open-left" = "uniform",
+"open-right" = "uniform"),
+observation_prob = list(
+"listen" = matrix(c(0.85, 0.15, 0.15, 0.85), nrow = 2, byrow = TRUE),
+"open-left" = "uniform",
+"open-right" = "uniform"),
+reward = data.frame(
+"action" = c("listen", "open-left", "open-left", "open-right", "open-right"),
+"start-state" = c("*", "tiger-left", "tiger-right", "tiger-left", "tiger-right"),
+"end-state" = c("*", "*", "*", "*", "*"),
+"observation" = c("*", "*", "*", "*", "*"),
+"reward" = c(-1, -100, 10, 10, -100))
+)
+TigerProblem
+tiger_solved <- solve_POMDP(TigerProblem)
+tiger_solved
+# solution(tiger_solved)
+plot(tiger_solved)
 ```
 
 
-Quantile aggregation outperform even spaacing state aggregation.

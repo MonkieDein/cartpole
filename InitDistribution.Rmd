@@ -7,12 +7,13 @@ output: pdf_document
 
 In this program we generate more data for the CARTPOLE problem GIVEN BAYES OUTPUT AND initial input
 ```{r setup, include=FALSE}
-list.of.packages <- c("splines", "devtools", "shinystan", "rstan", "lmerTest","gdata","foreach","rlist","doParallel")
+list.of.packages <- c("splines", "devtools", "shinystan", "rstan", "lmerTest","gdata","foreach","rlist","doParallel","plyr")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
 library(splines)
 library(devtools)
+library(plyr)
 library(shinystan)
 library(rstan)
 library(lmerTest)
@@ -29,7 +30,7 @@ df = read.csv("DATA/data.csv")[,-1]
 ```{r}
 cn = c("Step" ,"CartPos", "CartVelocity" ,"PoleAngle", "PoleVelocity" ,"Action", "Reward","FutCarPos","FutCarVel", "FutPolAng" ,"FutPolVel","ChgCarPos","ChgCarVel","ChgPolAng","ChgPolVel" )
 # SET CONSTANT
-n=1000000
+n=10000
 POS = 2
 CVEL = 3
 ANG = 4
@@ -74,5 +75,10 @@ FixPosition = min(CartPosQuantile)
 init_state <- rep(0,n)
 for(i2 in 1:n)  {
   init_state[i2] = var2state(Splitstate,FixPosition,init[i2,2],init[i2,3],init[i2,4],CartPosQuantile,CartVelQuantile,PoleAngleQuantile,PoleVelocityQuantile)
-}
+} # init[i2,1]
+init_freq=rep(0,Splitstate^3) #4
+f2 = count(init_state)
+init_freq[f2[,1]]=f2[,2]
+init_freq = init_freq/n
+write.csv(init_freq,"DATA/init_dist.csv")
 ```

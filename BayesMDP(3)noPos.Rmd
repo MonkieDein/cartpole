@@ -24,7 +24,7 @@ df = read.csv("DATA/data.csv")[,-1]
 
 ```{r}
 # summary(df)
-Splitstate = 20
+Splitstate = 10
 # summary(df)
 
 # MAKE QUANTILE
@@ -219,10 +219,10 @@ if (!dir.exists(dirname)){
 }
 k=paste0(dirname,"/a2xPOS")
 if (TRUE){
-  write.csv(CartPosQuantile[-Splitstate],paste0(k,"_CartPositionQuantile.csv"))
-  write.csv(CartVelQuantile[-Splitstate],paste0(k,"_CartVelQuantile.csv"))
-  write.csv(PoleAngleQuantile[-Splitstate],paste0(k,"_PoleAngleQuantile.csv"))
-  write.csv(PoleVelocityQuantile[-Splitstate],paste0(k,"_PoleVelocityQuantile.csv"))
+  write.csv(CartPosQuantile,paste0(k,"_CartPositionQuantile.csv"))
+  write.csv(CartVelQuantile,paste0(k,"_CartVelQuantile.csv"))
+  write.csv(PoleAngleQuantile,paste0(k,"_PoleAngleQuantile.csv"))
+  write.csv(PoleVelocityQuantile,paste0(k,"_PoleVelocityQuantile.csv"))
   write.csv(1:(totalstate/Splitstate),paste0(k,"_StateMap.csv"))
   write.csv(1:(totalstate/Splitstate),paste0(k,"_StateArr.csv"))
   write.csv(ExpectedRew,paste0(k,"_Reward.csv"))

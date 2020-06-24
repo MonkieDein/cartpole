@@ -216,20 +216,20 @@ foreach (i=12:15) %do% {
 
 For POMDP we need to know the relationship between the pole angle and the rest of the variable then we will use the rest of the variable to estimate the possible pole angle and do MDP on it.
 ```{r}
-PoleAngleFit = lm(PoleAngle ~  CartPos + CartVelocity + PoleVelocity,data = df)
+PoleAngleFit = lm(PoleAngle ~ CartVelocity + PoleVelocity ,data = df)#CartPos +
 summary(PoleAngleFit)
 
 plot(df$PoleVelocity,df$PoleAngle)
 points(df$PoleVelocity,PoleAngleFit$fitted.values,col="red")
-plot(df$CartPos,df$PoleAngle)
-points(df$CartPos,PoleAngleFit$fitted.values,col="red")
+# plot(df$CartPos,df$PoleAngle)
+# points(df$CartPos,PoleAngleFit$fitted.values,col="red")
 plot(df$CartVelocity,df$PoleAngle)
 points(df$CartVelocity,PoleAngleFit$fitted.values,col="red")
 
 res = resid(PoleAngleFit)
 plot(res,df$PoleAngle)
 plot(res,df$CartVelocity)
-plot(res,df$CartPos)
+# plot(res,df$CartPos)
 plot(res,df$PoleVelocity)
 
 hist(res)
@@ -239,7 +239,6 @@ if (!dir.exists(dirname)){
 }
 
 write.csv(PoleAngleFit$coefficients,paste0(dirname,"/","POMDPpoleangle.csv"))
-
 ```
 
 
@@ -294,7 +293,7 @@ generated quantities {
 # -------------------------------
 # SEPARATE THE FIT Y MULTIPLE TIME FOR EACH VARIABLES. # DONT NEED FOR LOOP, NEED TO CHANGE X AND Y THO.
 
-X = df[,c(2,3,5)]
+X = df[,c(3,5)]
 X = cbind(X,1)
 # for (i in 12:15){
 
@@ -317,7 +316,7 @@ lin_reg = stan(model_code=stan_model,
 fit1_samples = rstan::extract(lin_reg)
 # str(fit1_samples)
 A_sample = fit1_samples[[1]]
-colnames(A_sample) = c("CartPos" ,"CartVelocity","PoleVelocity" ,"CONSTANT")
+colnames(A_sample) = c("CartVelocity","PoleVelocity" ,"CONSTANT")
 # Write CSV in R
 write.csv(A_sample, file = paste0(dirname,"/BayesPOMDPangle.csv")) # 12
 Error = fit1_samples[[2]]

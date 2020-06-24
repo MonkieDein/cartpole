@@ -27,7 +27,7 @@ if(generate_samples):
         laststate = None
         
         totrew = []
-        for k in tqdm.trange(20):
+        for k in tqdm.trange(200):
             env.reset()
             done = False
             count = 0
