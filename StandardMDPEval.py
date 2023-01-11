@@ -1,3 +1,8 @@
+import sys
+sys.path.append('c:\\Users\\USER\\Documents\\GitHub\\cartpole')
+sys.path.append('c:\windows\system32\gym')
+sys.path.append('c:\\users\\user\\appdata\local\programs\python\python37\lib\site-packages')
+
 from choseaction import *
 #from dynamicChoseaction import *
 ## Generate samples
